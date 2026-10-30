@@ -8,6 +8,8 @@ export interface Pose {
   theta: number;
   valid: boolean;
   source: string;
+  std_xy?: number;
+  std_theta?: number;
   timestamp: number;
 }
 
@@ -83,6 +85,90 @@ export interface MapSnapshot {
   origin: [number, number];
   data_rle: [number, number][];
   trajectory: [number, number][];
+  particles?: [number, number, number][];
+  objects?: MappedObject[];
+  ground_truth?: { x: number; y: number; theta: number } | null;
+}
+
+export interface MappedObject {
+  id: number;
+  color: string;
+  x: number;
+  y: number;
+  observations: number;
+  first_seen: number;
+  last_seen: number;
+  sorted: boolean;
+}
+
+export interface LocalizationStatus {
+  enabled: boolean;
+  mode: string;
+  active: boolean;
+  method: string;
+  experimental: boolean;
+  map: string | null;
+  converged: boolean | null;
+  searching?: boolean;
+  std_xy: number | null;
+  std_theta: number | null;
+  particles: number;
+  neff: number;
+  likelihood: number;
+  update_ms: number;
+  correction: [number, number, number];
+}
+
+export interface Waypoint {
+  x?: number | null;
+  y?: number | null;
+  theta?: number | null;
+  location?: string | null;
+  dwell_s: number;
+}
+
+export interface MissionDef {
+  name: string;
+  waypoints: Waypoint[];
+  loop: boolean;
+  max_loops: number;
+  return_home: boolean;
+  on_failure: "skip" | "abort";
+}
+
+export interface MissionStatus {
+  state: string;
+  mission: string | null;
+  waypoint_index: number;
+  waypoints: number;
+  loops_done: number;
+  reached: number;
+  skipped: string[];
+  message: string;
+  started_at: number | null;
+}
+
+export interface SimState {
+  name: string;
+  bounds: [number, number, number, number];
+  rects: number[][];
+  circles: number[][];
+  dynamic: number[][];
+  robot: { x: number; y: number; theta: number };
+  objects: { id: number; color: string; x: number; y: number; held: boolean; sorted_bin: number | null }[];
+  collisions: number;
+  battery_v: number;
+  faults: {
+    motor_fault: boolean;
+    encoder_fault: boolean;
+    estop_pressed: boolean;
+    servo_fault: boolean;
+    camera_covered: boolean;
+    disconnected_sensors: string[];
+  };
+  sensors: string[];
+  estimate: Pose;
+  pose_error_m: number;
 }
 
 export interface Detection {
@@ -149,6 +235,9 @@ export interface RobotState {
   mapping: MappingStatus;
   vision: VisionStatus;
   sorting: SortStatus;
+  localization: LocalizationStatus;
+  mission: MissionStatus;
+  objects_mapped: number;
   capabilities: Record<string, boolean>;
   ground_truth?: { x: number; y: number; theta: number } | null;
 }
