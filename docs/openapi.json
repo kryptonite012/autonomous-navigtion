@@ -1911,6 +1911,579 @@
     }
    }
   },
+  "/api/localization/status": {
+   "get": {
+    "tags": [
+     "localization"
+    ],
+    "summary": "Loc Status",
+    "operationId": "loc_status_api_localization_status_get",
+    "parameters": [
+     {
+      "name": "particles",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": false,
+       "title": "Particles"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/localization/initial-pose": {
+   "post": {
+    "tags": [
+     "localization"
+    ],
+    "summary": "Loc Initial Pose",
+    "description": "Tell the robot where it is on the map (like '2D Pose Estimate' in RViz).",
+    "operationId": "loc_initial_pose_api_localization_initial_pose_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/InitialPose"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/localization/global": {
+   "post": {
+    "tags": [
+     "localization"
+    ],
+    "summary": "Loc Global",
+    "operationId": "loc_global_api_localization_global_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/missions": {
+   "get": {
+    "tags": [
+     "missions"
+    ],
+    "summary": "Mission List",
+    "operationId": "mission_list_api_missions_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/missions/status": {
+   "get": {
+    "tags": [
+     "missions"
+    ],
+    "summary": "Mission Status",
+    "operationId": "mission_status_api_missions_status_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/missions/{name}": {
+   "put": {
+    "tags": [
+     "missions"
+    ],
+    "summary": "Mission Save",
+    "operationId": "mission_save_api_missions__name__put",
+    "parameters": [
+     {
+      "name": "name",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Name"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MissionIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "missions"
+    ],
+    "summary": "Mission Delete",
+    "operationId": "mission_delete_api_missions__name__delete",
+    "parameters": [
+     {
+      "name": "name",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Name"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/missions/{name}/start": {
+   "post": {
+    "tags": [
+     "missions"
+    ],
+    "summary": "Mission Start",
+    "operationId": "mission_start_api_missions__name__start_post",
+    "parameters": [
+     {
+      "name": "name",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Name"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/missions/stop": {
+   "post": {
+    "tags": [
+     "missions"
+    ],
+    "summary": "Mission Stop",
+    "operationId": "mission_stop_api_missions_stop_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/vision/objects": {
+   "get": {
+    "tags": [
+     "vision"
+    ],
+    "summary": "Objects List",
+    "operationId": "objects_list_api_vision_objects_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "vision"
+    ],
+    "summary": "Objects Clear",
+    "operationId": "objects_clear_api_vision_objects_delete",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/simulation/state": {
+   "get": {
+    "tags": [
+     "simulation"
+    ],
+    "summary": "Sim State",
+    "operationId": "sim_state_api_simulation_state_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/simulation/faults": {
+   "post": {
+    "tags": [
+     "simulation"
+    ],
+    "summary": "Sim Faults",
+    "operationId": "sim_faults_api_simulation_faults_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SimFaults"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/simulation/obstacles": {
+   "post": {
+    "tags": [
+     "simulation"
+    ],
+    "summary": "Sim Add Obstacle",
+    "operationId": "sim_add_obstacle_api_simulation_obstacles_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SimObstacle"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "simulation"
+    ],
+    "summary": "Sim Clear Obstacles",
+    "operationId": "sim_clear_obstacles_api_simulation_obstacles_delete",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/simulation/objects/scatter": {
+   "post": {
+    "tags": [
+     "simulation"
+    ],
+    "summary": "Sim Scatter",
+    "operationId": "sim_scatter_api_simulation_objects_scatter_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SimScatter"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/simulation/teleport": {
+   "post": {
+    "tags": [
+     "simulation"
+    ],
+    "summary": "Sim Teleport",
+    "description": "Kidnapped-robot test: move the robot without updating odometry.",
+    "operationId": "sim_teleport_api_simulation_teleport_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SimTeleport"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/simulation/reset": {
+   "post": {
+    "tags": [
+     "simulation"
+    ],
+    "summary": "Sim Reset",
+    "operationId": "sim_reset_api_simulation_reset_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/simulation/reference-map": {
+   "post": {
+    "tags": [
+     "simulation"
+    ],
+    "summary": "Sim Reference Map",
+    "description": "Save a ground-truth map of the simulated room (no exploration needed).",
+    "operationId": "sim_reference_map_api_simulation_reference_map_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MapName"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/ping": {
    "get": {
     "summary": "Ping",
@@ -2094,6 +2667,35 @@
     "type": "object",
     "title": "HTTPValidationError"
    },
+   "InitialPose": {
+    "properties": {
+     "x": {
+      "type": "number",
+      "maximum": 100.0,
+      "minimum": -100.0,
+      "title": "X"
+     },
+     "y": {
+      "type": "number",
+      "maximum": 100.0,
+      "minimum": -100.0,
+      "title": "Y"
+     },
+     "theta": {
+      "type": "number",
+      "maximum": 6.283185307179586,
+      "minimum": -6.283185307179586,
+      "title": "Theta",
+      "default": 0.0
+     }
+    },
+    "type": "object",
+    "required": [
+     "x",
+     "y"
+    ],
+    "title": "InitialPose"
+   },
    "LoginRequest": {
     "properties": {
      "username": {
@@ -2171,6 +2773,47 @@
     },
     "type": "object",
     "title": "MappingStart"
+   },
+   "MissionIn": {
+    "properties": {
+     "waypoints": {
+      "items": {
+       "$ref": "#/components/schemas/WaypointIn"
+      },
+      "type": "array",
+      "maxItems": 100,
+      "minItems": 1,
+      "title": "Waypoints"
+     },
+     "loop": {
+      "type": "boolean",
+      "title": "Loop",
+      "default": false
+     },
+     "max_loops": {
+      "type": "integer",
+      "maximum": 1000.0,
+      "minimum": 0.0,
+      "title": "Max Loops",
+      "default": 0
+     },
+     "return_home": {
+      "type": "boolean",
+      "title": "Return Home",
+      "default": false
+     },
+     "on_failure": {
+      "type": "string",
+      "pattern": "^(skip|abort)$",
+      "title": "On Failure",
+      "default": "skip"
+     }
+    },
+    "type": "object",
+    "required": [
+     "waypoints"
+    ],
+    "title": "MissionIn"
    },
    "NamedLocation": {
     "properties": {
@@ -2348,6 +2991,189 @@
      "angle"
     ],
     "title": "ServoCalibration"
+   },
+   "SimFaults": {
+    "properties": {
+     "motor_fault": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Motor Fault"
+     },
+     "encoder_fault": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Encoder Fault"
+     },
+     "servo_fault": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Servo Fault"
+     },
+     "camera_covered": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Camera Covered"
+     },
+     "estop_pressed": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Estop Pressed"
+     },
+     "battery_voltage": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 8.5,
+        "minimum": 5.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Battery Voltage"
+     },
+     "disconnected_sensors": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array",
+        "maxItems": 16
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Disconnected Sensors"
+     }
+    },
+    "type": "object",
+    "title": "SimFaults"
+   },
+   "SimObstacle": {
+    "properties": {
+     "x": {
+      "type": "number",
+      "maximum": 50.0,
+      "minimum": -50.0,
+      "title": "X"
+     },
+     "y": {
+      "type": "number",
+      "maximum": 50.0,
+      "minimum": -50.0,
+      "title": "Y"
+     },
+     "radius": {
+      "type": "number",
+      "maximum": 0.5,
+      "minimum": 0.03,
+      "title": "Radius",
+      "default": 0.1
+     },
+     "vx": {
+      "type": "number",
+      "maximum": 0.5,
+      "minimum": -0.5,
+      "title": "Vx",
+      "default": 0.0
+     },
+     "vy": {
+      "type": "number",
+      "maximum": 0.5,
+      "minimum": -0.5,
+      "title": "Vy",
+      "default": 0.0
+     }
+    },
+    "type": "object",
+    "required": [
+     "x",
+     "y"
+    ],
+    "title": "SimObstacle"
+   },
+   "SimScatter": {
+    "properties": {
+     "count": {
+      "type": "integer",
+      "maximum": 30.0,
+      "minimum": 1.0,
+      "title": "Count",
+      "default": 6
+     },
+     "colors": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "maxItems": 7,
+      "minItems": 1,
+      "title": "Colors"
+     }
+    },
+    "type": "object",
+    "title": "SimScatter"
+   },
+   "SimTeleport": {
+    "properties": {
+     "x": {
+      "type": "number",
+      "maximum": 50.0,
+      "minimum": -50.0,
+      "title": "X"
+     },
+     "y": {
+      "type": "number",
+      "maximum": 50.0,
+      "minimum": -50.0,
+      "title": "Y"
+     },
+     "theta": {
+      "type": "number",
+      "maximum": 6.283185307179586,
+      "minimum": -6.283185307179586,
+      "title": "Theta",
+      "default": 0.0
+     }
+    },
+    "type": "object",
+    "required": [
+     "x",
+     "y"
+    ],
+    "title": "SimTeleport"
    },
    "SortingConfig": {
     "properties": {
@@ -2629,6 +3455,71 @@
     },
     "type": "object",
     "title": "VisionSettings"
+   },
+   "WaypointIn": {
+    "properties": {
+     "x": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 100.0,
+        "minimum": -100.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "X"
+     },
+     "y": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 100.0,
+        "minimum": -100.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Y"
+     },
+     "theta": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 6.283185307179586,
+        "minimum": -6.283185307179586
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Theta"
+     },
+     "location": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 64,
+        "pattern": "^[A-Za-z0-9_\\-]+$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Location"
+     },
+     "dwell_s": {
+      "type": "number",
+      "maximum": 3600.0,
+      "minimum": 0.0,
+      "title": "Dwell S",
+      "default": 0.0
+     }
+    },
+    "type": "object",
+    "title": "WaypointIn"
    }
   }
  }
