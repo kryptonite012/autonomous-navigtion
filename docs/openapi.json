@@ -1,0 +1,2635 @@
+{
+ "openapi": "3.1.0",
+ "info": {
+  "title": "PROJECT NEXUS API",
+  "description": "Control and telemetry API for the NEXUS autonomous mobile robot.",
+  "version": "1.0.0"
+ },
+ "paths": {
+  "/api/auth/login": {
+   "post": {
+    "tags": [
+     "auth"
+    ],
+    "summary": "Login",
+    "operationId": "login_api_auth_login_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/LoginRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/TokenResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/auth/logout": {
+   "post": {
+    "tags": [
+     "auth"
+    ],
+    "summary": "Logout",
+    "operationId": "logout_api_auth_logout_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/auth/me": {
+   "get": {
+    "tags": [
+     "auth"
+    ],
+    "summary": "Me",
+    "operationId": "me_api_auth_me_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/auth/password": {
+   "post": {
+    "tags": [
+     "auth"
+    ],
+    "summary": "Change Password",
+    "operationId": "change_password_api_auth_password_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PasswordChange"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/users": {
+   "get": {
+    "tags": [
+     "users"
+    ],
+    "summary": "List Users",
+    "operationId": "list_users_api_users_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "users"
+    ],
+    "summary": "Create User",
+    "operationId": "create_user_api_users_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/UserCreate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/users/{user_id}": {
+   "patch": {
+    "tags": [
+     "users"
+    ],
+    "summary": "Update User",
+    "operationId": "update_user_api_users__user_id__patch",
+    "parameters": [
+     {
+      "name": "user_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "User Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/UserUpdate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "users"
+    ],
+    "summary": "Delete User",
+    "operationId": "delete_user_api_users__user_id__delete",
+    "parameters": [
+     {
+      "name": "user_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "User Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/users/audit": {
+   "get": {
+    "tags": [
+     "users"
+    ],
+    "summary": "Audit Log",
+    "operationId": "audit_log_api_users_audit_get",
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 200,
+       "title": "Limit"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/system/status": {
+   "get": {
+    "tags": [
+     "system"
+    ],
+    "summary": "System Status",
+    "operationId": "system_status_api_system_status_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/system/health": {
+   "get": {
+    "tags": [
+     "system"
+    ],
+    "summary": "System Health",
+    "operationId": "system_health_api_system_health_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/system/shutdown": {
+   "post": {
+    "tags": [
+     "system"
+    ],
+    "summary": "System Shutdown",
+    "description": "Stop the robot safely and end the server process (systemd may restart it).",
+    "operationId": "system_shutdown_api_system_shutdown_post",
+    "parameters": [
+     {
+      "name": "poweroff",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": false,
+       "title": "Poweroff"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/system/backup": {
+   "post": {
+    "tags": [
+     "system"
+    ],
+    "summary": "System Backup",
+    "operationId": "system_backup_api_system_backup_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/system/config": {
+   "get": {
+    "tags": [
+     "system"
+    ],
+    "summary": "Get Config",
+    "operationId": "get_config_api_system_config_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/system/safety": {
+   "put": {
+    "tags": [
+     "system"
+    ],
+    "summary": "Update Safety",
+    "operationId": "update_safety_api_system_safety_put",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SafetySettings"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/robot/state": {
+   "get": {
+    "tags": [
+     "robot"
+    ],
+    "summary": "Robot State",
+    "operationId": "robot_state_api_robot_state_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/robot/start": {
+   "post": {
+    "tags": [
+     "robot"
+    ],
+    "summary": "Robot Start",
+    "description": "Switch to manual control mode (teleoperation).",
+    "operationId": "robot_start_api_robot_start_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/robot/stop": {
+   "post": {
+    "tags": [
+     "robot"
+    ],
+    "summary": "Robot Stop",
+    "operationId": "robot_stop_api_robot_stop_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/robot/emergency-stop": {
+   "post": {
+    "tags": [
+     "robot"
+    ],
+    "summary": "Robot Estop",
+    "operationId": "robot_estop_api_robot_emergency_stop_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/robot/emergency-stop/reset": {
+   "post": {
+    "tags": [
+     "robot"
+    ],
+    "summary": "Robot Estop Reset",
+    "operationId": "robot_estop_reset_api_robot_emergency_stop_reset_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/robot/faults/clear": {
+   "post": {
+    "tags": [
+     "robot"
+    ],
+    "summary": "Clear Fault",
+    "operationId": "clear_fault_api_robot_faults_clear_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/FaultClear"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/robot/teleop": {
+   "post": {
+    "tags": [
+     "robot"
+    ],
+    "summary": "Robot Teleop",
+    "description": "Velocity command; must be repeated at >= 2 Hz or the watchdog stops the robot.",
+    "operationId": "robot_teleop_api_robot_teleop_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/Teleop"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/robot/pose/reset": {
+   "post": {
+    "tags": [
+     "robot"
+    ],
+    "summary": "Robot Pose Reset",
+    "operationId": "robot_pose_reset_api_robot_pose_reset_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PoseReset"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/navigation/status": {
+   "get": {
+    "tags": [
+     "navigation"
+    ],
+    "summary": "Nav Status",
+    "operationId": "nav_status_api_navigation_status_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/navigation/start": {
+   "post": {
+    "tags": [
+     "navigation"
+    ],
+    "summary": "Nav Start",
+    "description": "Start autonomous frontier exploration (maps while it explores).",
+    "operationId": "nav_start_api_navigation_start_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/navigation/goal": {
+   "post": {
+    "tags": [
+     "navigation"
+    ],
+    "summary": "Nav Goal",
+    "operationId": "nav_goal_api_navigation_goal_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/GoalRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/navigation/pause": {
+   "post": {
+    "tags": [
+     "navigation"
+    ],
+    "summary": "Nav Pause",
+    "operationId": "nav_pause_api_navigation_pause_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/navigation/resume": {
+   "post": {
+    "tags": [
+     "navigation"
+    ],
+    "summary": "Nav Resume",
+    "operationId": "nav_resume_api_navigation_resume_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/navigation/cancel": {
+   "post": {
+    "tags": [
+     "navigation"
+    ],
+    "summary": "Nav Cancel",
+    "operationId": "nav_cancel_api_navigation_cancel_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/navigation/locations": {
+   "post": {
+    "tags": [
+     "navigation"
+    ],
+    "summary": "Nav Add Location",
+    "operationId": "nav_add_location_api_navigation_locations_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/NamedLocation"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/navigation/locations/{name}": {
+   "delete": {
+    "tags": [
+     "navigation"
+    ],
+    "summary": "Nav Delete Location",
+    "operationId": "nav_delete_location_api_navigation_locations__name__delete",
+    "parameters": [
+     {
+      "name": "name",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Name"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/mapping/start": {
+   "post": {
+    "tags": [
+     "mapping"
+    ],
+    "summary": "Map Start",
+    "operationId": "map_start_api_mapping_start_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MappingStart"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/mapping/stop": {
+   "post": {
+    "tags": [
+     "mapping"
+    ],
+    "summary": "Map Stop",
+    "operationId": "map_stop_api_mapping_stop_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/mapping/reset": {
+   "post": {
+    "tags": [
+     "mapping"
+    ],
+    "summary": "Map Reset",
+    "operationId": "map_reset_api_mapping_reset_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/mapping/current": {
+   "get": {
+    "tags": [
+     "mapping"
+    ],
+    "summary": "Map Current",
+    "operationId": "map_current_api_mapping_current_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/mapping/current.png": {
+   "get": {
+    "tags": [
+     "mapping"
+    ],
+    "summary": "Map Png",
+    "operationId": "map_png_api_mapping_current_png_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/mapping/maps": {
+   "get": {
+    "tags": [
+     "mapping"
+    ],
+    "summary": "Map List",
+    "operationId": "map_list_api_mapping_maps_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/mapping/save": {
+   "post": {
+    "tags": [
+     "mapping"
+    ],
+    "summary": "Map Save",
+    "operationId": "map_save_api_mapping_save_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MapName"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/mapping/load": {
+   "post": {
+    "tags": [
+     "mapping"
+    ],
+    "summary": "Map Load",
+    "operationId": "map_load_api_mapping_load_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MapName"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/mapping/rename": {
+   "post": {
+    "tags": [
+     "mapping"
+    ],
+    "summary": "Map Rename",
+    "operationId": "map_rename_api_mapping_rename_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MapRename"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/mapping/maps/{name}": {
+   "delete": {
+    "tags": [
+     "mapping"
+    ],
+    "summary": "Map Delete",
+    "operationId": "map_delete_api_mapping_maps__name__delete",
+    "parameters": [
+     {
+      "name": "name",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Name"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/mapping/maps/{name}/download": {
+   "get": {
+    "tags": [
+     "mapping"
+    ],
+    "summary": "Map Download",
+    "operationId": "map_download_api_mapping_maps__name__download_get",
+    "parameters": [
+     {
+      "name": "name",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Name"
+      }
+     },
+     {
+      "name": "fmt",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "yaml",
+       "title": "Fmt"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/sensors/status": {
+   "get": {
+    "tags": [
+     "sensors"
+    ],
+    "summary": "Sensors Status",
+    "operationId": "sensors_status_api_sensors_status_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/sensors/readings": {
+   "get": {
+    "tags": [
+     "sensors"
+    ],
+    "summary": "Sensors Readings",
+    "operationId": "sensors_readings_api_sensors_readings_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/logs/events": {
+   "get": {
+    "tags": [
+     "logs"
+    ],
+    "summary": "Events",
+    "operationId": "events_api_logs_events_get",
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 200,
+       "title": "Limit"
+      }
+     },
+     {
+      "name": "severity",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Severity"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/logs/telemetry": {
+   "get": {
+    "tags": [
+     "logs"
+    ],
+    "summary": "Telemetry History",
+    "description": "Recent in-memory telemetry (2 Hz) for charts; older data is in the database.",
+    "operationId": "telemetry_history_api_logs_telemetry_get",
+    "parameters": [
+     {
+      "name": "minutes",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 10,
+       "title": "Minutes"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/logs/telemetry/stored": {
+   "get": {
+    "tags": [
+     "logs"
+    ],
+    "summary": "Telemetry Stored",
+    "operationId": "telemetry_stored_api_logs_telemetry_stored_get",
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 500,
+       "title": "Limit"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/vision/status": {
+   "get": {
+    "tags": [
+     "vision"
+    ],
+    "summary": "Vision Status",
+    "operationId": "vision_status_api_vision_status_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/vision/start": {
+   "post": {
+    "tags": [
+     "vision"
+    ],
+    "summary": "Vision Start",
+    "operationId": "vision_start_api_vision_start_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/vision/stop": {
+   "post": {
+    "tags": [
+     "vision"
+    ],
+    "summary": "Vision Stop",
+    "operationId": "vision_stop_api_vision_stop_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/vision/detections": {
+   "get": {
+    "tags": [
+     "vision"
+    ],
+    "summary": "Vision Detections",
+    "operationId": "vision_detections_api_vision_detections_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/vision/calibrate": {
+   "post": {
+    "tags": [
+     "vision"
+    ],
+    "summary": "Vision Calibrate",
+    "operationId": "vision_calibrate_api_vision_calibrate_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CalibrationRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/vision/settings": {
+   "put": {
+    "tags": [
+     "vision"
+    ],
+    "summary": "Vision Settings",
+    "operationId": "vision_settings_api_vision_settings_put",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/VisionSettings"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/vision/snapshot.jpg": {
+   "get": {
+    "tags": [
+     "vision"
+    ],
+    "summary": "Vision Snapshot",
+    "operationId": "vision_snapshot_api_vision_snapshot_jpg_get",
+    "parameters": [
+     {
+      "name": "kind",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "annotated",
+       "title": "Kind"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/vision/stream.mjpg": {
+   "get": {
+    "tags": [
+     "vision"
+    ],
+    "summary": "Vision Stream",
+    "operationId": "vision_stream_api_vision_stream_mjpg_get",
+    "parameters": [
+     {
+      "name": "kind",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "annotated",
+       "title": "Kind"
+      }
+     },
+     {
+      "name": "fps",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 10,
+       "title": "Fps"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/sorting/start": {
+   "post": {
+    "tags": [
+     "sorting"
+    ],
+    "summary": "Sorting Start",
+    "operationId": "sorting_start_api_sorting_start_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/sorting/pause": {
+   "post": {
+    "tags": [
+     "sorting"
+    ],
+    "summary": "Sorting Pause",
+    "operationId": "sorting_pause_api_sorting_pause_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/sorting/resume": {
+   "post": {
+    "tags": [
+     "sorting"
+    ],
+    "summary": "Sorting Resume",
+    "operationId": "sorting_resume_api_sorting_resume_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/sorting/stop": {
+   "post": {
+    "tags": [
+     "sorting"
+    ],
+    "summary": "Sorting Stop",
+    "operationId": "sorting_stop_api_sorting_stop_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/sorting/status": {
+   "get": {
+    "tags": [
+     "sorting"
+    ],
+    "summary": "Sorting Status",
+    "operationId": "sorting_status_api_sorting_status_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/sorting/statistics": {
+   "get": {
+    "tags": [
+     "sorting"
+    ],
+    "summary": "Sorting Statistics",
+    "operationId": "sorting_statistics_api_sorting_statistics_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/sorting/history": {
+   "get": {
+    "tags": [
+     "sorting"
+    ],
+    "summary": "Sorting History",
+    "operationId": "sorting_history_api_sorting_history_get",
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 100,
+       "title": "Limit"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/sorting/config": {
+   "put": {
+    "tags": [
+     "sorting"
+    ],
+    "summary": "Sorting Config",
+    "operationId": "sorting_config_api_sorting_config_put",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SortingConfig"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/sorting/bins/empty": {
+   "post": {
+    "tags": [
+     "sorting"
+    ],
+    "summary": "Sorting Bins Empty",
+    "operationId": "sorting_bins_empty_api_sorting_bins_empty_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/sorting/servo": {
+   "post": {
+    "tags": [
+     "sorting"
+    ],
+    "summary": "Sorting Servo",
+    "operationId": "sorting_servo_api_sorting_servo_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ServoCalibration"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/ping": {
+   "get": {
+    "summary": "Ping",
+    "operationId": "ping_api_ping_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "components": {
+  "schemas": {
+   "CalibrationRequest": {
+    "properties": {
+     "color": {
+      "type": "string",
+      "pattern": "^[a-z]{2,16}$",
+      "title": "Color"
+     },
+     "ranges": {
+      "anyOf": [
+       {
+        "items": {
+         "$ref": "#/components/schemas/HSVBounds"
+        },
+        "type": "array",
+        "maxItems": 3
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ranges"
+     },
+     "roi": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "integer"
+        },
+        "type": "array",
+        "maxItems": 4,
+        "minItems": 4
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Roi",
+      "description": "x, y, w, h region containing only the target colour"
+     },
+     "persist": {
+      "type": "boolean",
+      "title": "Persist",
+      "default": false
+     }
+    },
+    "type": "object",
+    "required": [
+     "color"
+    ],
+    "title": "CalibrationRequest"
+   },
+   "FaultClear": {
+    "properties": {
+     "fault": {
+      "type": "string",
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Fault"
+     }
+    },
+    "type": "object",
+    "required": [
+     "fault"
+    ],
+    "title": "FaultClear"
+   },
+   "GoalRequest": {
+    "properties": {
+     "x": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 100.0,
+        "minimum": -100.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "X"
+     },
+     "y": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 100.0,
+        "minimum": -100.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Y"
+     },
+     "theta": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 6.283185307179586,
+        "minimum": -6.283185307179586
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Theta"
+     },
+     "location": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 64
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Location"
+     }
+    },
+    "type": "object",
+    "title": "GoalRequest"
+   },
+   "HSVBounds": {
+    "properties": {
+     "lower": {
+      "items": {
+       "type": "integer"
+      },
+      "type": "array",
+      "maxItems": 3,
+      "minItems": 3,
+      "title": "Lower"
+     },
+     "upper": {
+      "items": {
+       "type": "integer"
+      },
+      "type": "array",
+      "maxItems": 3,
+      "minItems": 3,
+      "title": "Upper"
+     }
+    },
+    "type": "object",
+    "required": [
+     "lower",
+     "upper"
+    ],
+    "title": "HSVBounds"
+   },
+   "HTTPValidationError": {
+    "properties": {
+     "detail": {
+      "items": {
+       "$ref": "#/components/schemas/ValidationError"
+      },
+      "type": "array",
+      "title": "Detail"
+     }
+    },
+    "type": "object",
+    "title": "HTTPValidationError"
+   },
+   "LoginRequest": {
+    "properties": {
+     "username": {
+      "type": "string",
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Username"
+     },
+     "password": {
+      "type": "string",
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Password"
+     }
+    },
+    "type": "object",
+    "required": [
+     "username",
+     "password"
+    ],
+    "title": "LoginRequest"
+   },
+   "MapName": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "maxLength": 64,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_\\-]*$",
+      "title": "Name"
+     }
+    },
+    "type": "object",
+    "required": [
+     "name"
+    ],
+    "title": "MapName"
+   },
+   "MapRename": {
+    "properties": {
+     "old_name": {
+      "type": "string",
+      "maxLength": 64,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_\\-]*$",
+      "title": "Old Name"
+     },
+     "new_name": {
+      "type": "string",
+      "maxLength": 64,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_\\-]*$",
+      "title": "New Name"
+     }
+    },
+    "type": "object",
+    "required": [
+     "old_name",
+     "new_name"
+    ],
+    "title": "MapRename"
+   },
+   "MappingStart": {
+    "properties": {
+     "explore": {
+      "type": "boolean",
+      "title": "Explore",
+      "default": true
+     },
+     "reset": {
+      "type": "boolean",
+      "title": "Reset",
+      "default": false
+     }
+    },
+    "type": "object",
+    "title": "MappingStart"
+   },
+   "NamedLocation": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "maxLength": 64,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9_\\-]+$",
+      "title": "Name"
+     },
+     "x": {
+      "type": "number",
+      "maximum": 100.0,
+      "minimum": -100.0,
+      "title": "X"
+     },
+     "y": {
+      "type": "number",
+      "maximum": 100.0,
+      "minimum": -100.0,
+      "title": "Y"
+     },
+     "theta": {
+      "type": "number",
+      "maximum": 6.283185307179586,
+      "minimum": -6.283185307179586,
+      "title": "Theta",
+      "default": 0.0
+     }
+    },
+    "type": "object",
+    "required": [
+     "name",
+     "x",
+     "y"
+    ],
+    "title": "NamedLocation"
+   },
+   "PasswordChange": {
+    "properties": {
+     "current_password": {
+      "type": "string",
+      "maxLength": 128,
+      "title": "Current Password"
+     },
+     "new_password": {
+      "type": "string",
+      "maxLength": 72,
+      "minLength": 10,
+      "title": "New Password"
+     }
+    },
+    "type": "object",
+    "required": [
+     "current_password",
+     "new_password"
+    ],
+    "title": "PasswordChange"
+   },
+   "PoseReset": {
+    "properties": {
+     "x": {
+      "type": "number",
+      "maximum": 100.0,
+      "minimum": -100.0,
+      "title": "X",
+      "default": 0.0
+     },
+     "y": {
+      "type": "number",
+      "maximum": 100.0,
+      "minimum": -100.0,
+      "title": "Y",
+      "default": 0.0
+     },
+     "theta": {
+      "type": "number",
+      "maximum": 6.283185307179586,
+      "minimum": -6.283185307179586,
+      "title": "Theta",
+      "default": 0.0
+     }
+    },
+    "type": "object",
+    "title": "PoseReset"
+   },
+   "SafetySettings": {
+    "properties": {
+     "emergency_stop_distance_m": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 1.0,
+        "minimum": 0.05
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Emergency Stop Distance M"
+     },
+     "slow_down_distance_m": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 2.0,
+        "minimum": 0.1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Slow Down Distance M"
+     },
+     "slow_down_factor": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 1.0,
+        "minimum": 0.1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Slow Down Factor"
+     },
+     "max_linear_mps": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 0.5,
+        "minimum": 0.05
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Max Linear Mps"
+     },
+     "max_angular_rps": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 3.0,
+        "minimum": 0.2
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Max Angular Rps"
+     }
+    },
+    "type": "object",
+    "title": "SafetySettings"
+   },
+   "ServoCalibration": {
+    "properties": {
+     "channel": {
+      "type": "string",
+      "pattern": "^(base|shoulder|gripper|sorter)$",
+      "title": "Channel"
+     },
+     "angle": {
+      "type": "number",
+      "maximum": 180.0,
+      "minimum": 0.0,
+      "title": "Angle"
+     }
+    },
+    "type": "object",
+    "required": [
+     "channel",
+     "angle"
+    ],
+    "title": "ServoCalibration"
+   },
+   "SortingConfig": {
+    "properties": {
+     "bins": {
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "type": "object",
+      "title": "Bins"
+     },
+     "unclassified_bin": {
+      "type": "integer",
+      "maximum": 16.0,
+      "minimum": 1.0,
+      "title": "Unclassified Bin"
+     },
+     "bin_capacity": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 1000.0,
+        "minimum": 1.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Bin Capacity"
+     },
+     "persist": {
+      "type": "boolean",
+      "title": "Persist",
+      "default": false
+     }
+    },
+    "type": "object",
+    "required": [
+     "bins",
+     "unclassified_bin"
+    ],
+    "title": "SortingConfig"
+   },
+   "Teleop": {
+    "properties": {
+     "linear": {
+      "type": "number",
+      "maximum": 1.0,
+      "minimum": -1.0,
+      "title": "Linear",
+      "description": "m/s, clamped further by the safety controller"
+     },
+     "angular": {
+      "type": "number",
+      "maximum": 4.0,
+      "minimum": -4.0,
+      "title": "Angular",
+      "description": "rad/s"
+     }
+    },
+    "type": "object",
+    "required": [
+     "linear",
+     "angular"
+    ],
+    "title": "Teleop"
+   },
+   "TokenResponse": {
+    "properties": {
+     "access_token": {
+      "type": "string",
+      "title": "Access Token"
+     },
+     "token_type": {
+      "type": "string",
+      "title": "Token Type",
+      "default": "bearer"
+     },
+     "expires_at": {
+      "type": "string",
+      "title": "Expires At"
+     },
+     "username": {
+      "type": "string",
+      "title": "Username"
+     },
+     "role": {
+      "type": "string",
+      "title": "Role"
+     }
+    },
+    "type": "object",
+    "required": [
+     "access_token",
+     "expires_at",
+     "username",
+     "role"
+    ],
+    "title": "TokenResponse"
+   },
+   "UserCreate": {
+    "properties": {
+     "username": {
+      "type": "string",
+      "maxLength": 64,
+      "minLength": 3,
+      "pattern": "^[A-Za-z0-9_.\\-]+$",
+      "title": "Username"
+     },
+     "password": {
+      "type": "string",
+      "maxLength": 72,
+      "minLength": 10,
+      "title": "Password"
+     },
+     "role": {
+      "type": "string",
+      "pattern": "^(viewer|operator|admin)$",
+      "title": "Role"
+     }
+    },
+    "type": "object",
+    "required": [
+     "username",
+     "password",
+     "role"
+    ],
+    "title": "UserCreate"
+   },
+   "UserUpdate": {
+    "properties": {
+     "role": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^(viewer|operator|admin)$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Role"
+     },
+     "is_active": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Is Active"
+     },
+     "password": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 72,
+        "minLength": 10
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Password"
+     }
+    },
+    "type": "object",
+    "title": "UserUpdate"
+   },
+   "ValidationError": {
+    "properties": {
+     "loc": {
+      "items": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "integer"
+        }
+       ]
+      },
+      "type": "array",
+      "title": "Location"
+     },
+     "msg": {
+      "type": "string",
+      "title": "Message"
+     },
+     "type": {
+      "type": "string",
+      "title": "Error Type"
+     },
+     "input": {
+      "title": "Input"
+     },
+     "ctx": {
+      "type": "object",
+      "title": "Context"
+     }
+    },
+    "type": "object",
+    "required": [
+     "loc",
+     "msg",
+     "type"
+    ],
+    "title": "ValidationError"
+   },
+   "VisionSettings": {
+    "properties": {
+     "min_area_px": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 100000.0,
+        "minimum": 20.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Min Area Px"
+     },
+     "min_confidence": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 1.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Min Confidence"
+     },
+     "blur_kernel": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 21.0,
+        "minimum": 1.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Blur Kernel"
+     },
+     "morph_kernel": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 21.0,
+        "minimum": 1.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Morph Kernel"
+     },
+     "enabled_colors": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Enabled Colors"
+     }
+    },
+    "type": "object",
+    "title": "VisionSettings"
+   }
+  }
+ }
+}
