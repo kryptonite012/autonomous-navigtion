@@ -137,6 +137,8 @@ mapping:
   free_threshold: 0.25
   max_range_m: 2.0
   maps_dir: data/maps
+  # with a LiDAR, align every scan with the map before inserting it
+  scan_matching: true
 
 navigation:
   goal_tolerance_m: 0.08

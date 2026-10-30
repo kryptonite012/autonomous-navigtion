@@ -98,6 +98,11 @@ class Localizer:
                 self.converged = False
             self._last_odom = odom_pose
 
+    def set_correction(self, map_pose: tuple[float, float, float], odom_pose: tuple[float, float, float]) -> None:
+        """Used by LiDAR scan matching while mapping (the filter is inactive then)."""
+        with self._lock:
+            self.correction = compose(map_pose, inverse(odom_pose))
+
     def global_localization(self) -> None:
         with self._lock:
             if not self.active:

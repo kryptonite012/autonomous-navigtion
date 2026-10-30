@@ -147,3 +147,36 @@ def test_object_map_places_visible_object(robot):
     assert wait(lambda: any(o["color"] == "red" for o in robot.objects.list()), 5.0)
     red = [o for o in robot.objects.list() if o["color"] == "red"][0]
     assert math.dist((red["x"], red["y"]), (0.6, -0.3)) < 0.12
+
+
+def _mapping_run(tmp_path, matching):
+    from robot.mapping.occupancy_grid import OCCUPIED
+    import cv2
+    import numpy as np
+    cfg = load_config(overrides={
+        "robot": {"mode": "simulation"}, "hardware": {"lidar": {"enabled": True}},
+        "simulation": {"odom_noise": 0.05, "seed": 11},
+        "mapping": {"maps_dir": str(tmp_path / f"m{matching}"), "scan_matching": matching}})
+    r = Robot(cfg)
+    r.start()
+    time.sleep(0.3)
+    try:
+        r.start_mapping(explore=False, reset=True)
+        for v, w, s in [(0.2, 0, 3), (0, -1.0, 1.6), (0.2, 0, 3), (0, 1.0, 1.6), (0.2, 0, 3)]:
+            drive(r, v, w, s)
+        ref = OccupancyGrid.from_config(cfg["mapping"])
+        r.hw.world.reference_grid(ref)
+        near = cv2.dilate((ref.ternary() == OCCUPIED).astype(np.uint8), np.ones((3, 3), np.uint8)).astype(bool)
+        occ = r.mapper.grid.ternary() == OCCUPIED
+        return err(r), (occ & near).sum() / max(1, occ.sum()), r.hw.world.state.collisions
+    finally:
+        r.shutdown()
+
+
+@pytest.mark.slow
+def test_lidar_scan_matching_reduces_mapping_drift(tmp_path):
+    err_off, prec_off, _ = _mapping_run(tmp_path, False)
+    err_on, prec_on, coll = _mapping_run(tmp_path, True)
+    assert coll == 0
+    assert err_on < 0.08 and err_on < err_off
+    assert prec_on > 0.6 and prec_on > prec_off

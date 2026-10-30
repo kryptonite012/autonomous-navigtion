@@ -17,6 +17,7 @@ from robot.hardware.base import HealthState, RangeReading
 from robot.hardware.factory import HardwareSet, build_hardware
 from robot.localization.ekf import OdometryEKF
 from robot.localization.localizer import Localizer
+from robot.mapping.scan_matcher import ScanMatcher
 from robot.mapping.mapper import Mapper
 from robot.motors.kinematics import DiffDriveKinematics
 from robot.navigation.missions import Mission, MissionRunner
@@ -61,6 +62,10 @@ class Robot:
         self.safety = SafetyController(self.hw.motors, self.kin, SafetyConfig.from_config(cfg), self.hw.estop,
                                        on_event=self._event, expected_sensors=[r.name for r in self.hw.ranges])
         self.mapper = Mapper(cfg, self.hw.lidar is not None, bool(self.hw.ranges), ch["robot_radius_m"])
+        mc = cfg["mapping"]
+        # LiDAR mapping corrects odometry drift by aligning each scan with the map so far
+        self.scan_matcher = ScanMatcher() if (self.hw.lidar is not None and mc.get("scan_matching", True)) else None
+        self._last_match_odom: Optional[tuple[float, float, float]] = None
         self.navigator = Navigator(cfg, lambda: self.mapper.grid, on_event=self._event)
         nc = cfg["navigation"]
         self.missions = MissionRunner(self.navigator, nc.get("home_location", "home"), on_event=self._event)
@@ -212,8 +217,10 @@ class Robot:
             self.localizer.update(self.odom.pose.as_tuple(), ranges, scan)
 
         pose = self._pose_if_valid()
-        # --- mapping
+        # --- mapping (with LiDAR scan matching to correct the pose first)
         if pose is not None and self.mapper.active:
+            if scan is not None and self.scan_matcher is not None:
+                pose = self._scan_match(pose, scan)
             self.mapper.update(pose, ranges, scan)
 
         # --- navigation
@@ -255,6 +262,21 @@ class Robot:
             if not self.localizer.pose_ok():
                 return None
             return self.localizer.map_pose(self.odom.pose.as_tuple())
+
+    def _scan_match(self, pose: tuple[float, float, float], scan) -> tuple[float, float, float]:
+        odom = self.odom.pose.as_tuple()
+        last = self._last_match_odom
+        if last is not None and math.dist(odom[:2], last[:2]) < 0.03 and \
+                abs(math.atan2(math.sin(odom[2] - last[2]), math.cos(odom[2] - last[2]))) < 0.03:
+            return pose
+        self._last_match_odom = odom
+        pts = ScanMatcher.scan_points(scan.angle_min, scan.angle_increment, scan.ranges, scan.range_max,
+                                      self.scan_matcher.max_beams)
+        res = self.scan_matcher.match(self.mapper.grid, pts, pose)
+        if res is not None and res.accepted:
+            self.localizer.set_correction(res.pose, odom)
+            return res.pose
+        return pose
 
     def _on_picked(self, color: str) -> None:
         pose = self._pose_if_valid()
@@ -514,7 +536,8 @@ class Robot:
             "pose": self.pose(),
             "safety": self.safety.status.as_dict(),
             "navigation": self.navigator.status(),
-            "mapping": self.mapper.status(),
+            "mapping": {**self.mapper.status(),
+                        "scan_matching": None if self.scan_matcher is None else self.scan_matcher.status()},
             "vision": self.vision.status(),
             "sorting": self.sorter.status(),
             "localization": self.localizer.status(),
