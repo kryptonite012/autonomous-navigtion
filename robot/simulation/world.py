@@ -82,6 +82,7 @@ class SimWorld:
         self.estop_pressed = False
         self.bin_events = 0
         self.held_object: Optional[SimObject] = None
+        self.encoder_fault = False
         self.lock = threading.RLock()
         self.sim_time = 0.0
 
@@ -238,6 +239,62 @@ class SimWorld:
             x, y, th = self.start_pose
             self.state = SimState(x, y, th)
             self.duty = (0.0, 0.0)
+
+    # ------------------------------------------------------------ scenarios
+    def free_position(self, margin: float = 0.2, tries: int = 200) -> tuple[float, float]:
+        x0, y0, x1, y1 = self.bounds
+        for _ in range(tries):
+            x = float(self.rng.uniform(x0 + margin, x1 - margin))
+            y = float(self.rng.uniform(y0 + margin, y1 - margin))
+            r = self.robot_radius
+            self.robot_radius = margin
+            blocked = self._collides(x, y)
+            self.robot_radius = r
+            if not blocked:
+                return x, y
+        raise RuntimeError("no free position found")
+
+    def scatter_objects(self, count: int, colors: list[str]) -> list[SimObject]:
+        """Replace all objects with ``count`` new ones at random free positions."""
+        with self.lock:
+            if self.held_object is not None:
+                self.held_object = None
+            objs = []
+            for i in range(count):
+                x, y = self.free_position(margin=0.15)
+                objs.append(SimObject(i + 1, colors[i % len(colors)], x, y))
+            self.objects = objs
+            return objs
+
+    def teleport(self, x: float, y: float, theta: float) -> None:
+        """Move the robot without telling the odometry (kidnapped robot test)."""
+        with self.lock:
+            if self._collides(x, y):
+                raise ValueError("position is inside an obstacle")
+            self.state.x, self.state.y, self.state.theta = x, y, theta
+            self.state.vl = self.state.vr = 0.0
+
+    def clear_dynamic(self) -> None:
+        with self.lock:
+            self.dynamic.clear()
+
+    def snapshot(self) -> dict:
+        with self.lock:
+            s = self.state
+            return {
+                "name": self.name,
+                "bounds": list(self.bounds),
+                "rects": [list(r) for r in self.rects],
+                "circles": [list(c) for c in self.circles],
+                "dynamic": [[round(v, 3) for v in d] for d in self.dynamic],
+                "robot": {"x": round(s.x, 4), "y": round(s.y, 4), "theta": round(s.theta, 4)},
+                "objects": [{"id": o.id, "color": o.color, "x": round(o.x, 3), "y": round(o.y, 3),
+                             "held": o.held, "sorted_bin": o.sorted_bin} for o in self.objects],
+                "collisions": s.collisions,
+                "battery_v": round(self.battery_v, 3),
+                "faults": {"motor_fault": self.motor_fault, "encoder_fault": self.encoder_fault,
+                           "estop_pressed": self.estop_pressed},
+            }
 
     def reference_grid(self, grid, spacing: float = 0.35, beams: int = 90, max_range: float = 3.0):
         """Fill ``grid`` with a map of the static world by ray casting from many

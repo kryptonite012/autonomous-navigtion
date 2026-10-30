@@ -48,6 +48,9 @@ class SimEncoders(EncoderPair):
                        1.0 + world.rng.normal(0, world.odom_noise))
 
     def ticks(self) -> tuple[int, int]:
+        if self.world.encoder_fault:
+            self._record_error("encoder signal lost")
+            raise IOError("encoder signal lost")
         s = self.world.state
         return (int(s.left_dist * self._scale[0] / self.m_per_tick),
                 int(s.right_dist * self._scale[1] / self.m_per_tick))
