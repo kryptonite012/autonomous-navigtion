@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #root { height: 100%; }
+  body { @apply bg-ink-950 text-slate-200 antialiased font-sans; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { @apply bg-ink-600 rounded; }
+}
+
+@layer components {
+  .card { @apply bg-ink-900 border border-ink-700 rounded-lg; }
+  .card-title { @apply text-xs font-semibold uppercase tracking-wider text-slate-400; }
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed; }
+  .btn-primary { @apply btn bg-accent/90 text-ink-950 hover:bg-accent; }
+  .btn-ghost { @apply btn border border-ink-600 text-slate-200 hover:bg-ink-700; }
+  .btn-danger { @apply btn bg-bad/90 text-white hover:bg-bad; }
+  .btn-warn { @apply btn bg-warn/90 text-ink-950 hover:bg-warn; }
+  .input { @apply bg-ink-850 border border-ink-600 rounded-md px-2.5 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-accent w-full; }
+  .label { @apply text-xs text-slate-400 mb-1 block; }
+  .kv { @apply flex justify-between text-sm py-1 border-b border-ink-800 last:border-0; }
+  .kv > span:first-child { @apply text-slate-400; }
+  .kv > span:last-child { @apply font-mono text-slate-100; }
+  .table-head { @apply text-left text-xs uppercase tracking-wide text-slate-500 font-medium; }
+}
