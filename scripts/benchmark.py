@@ -146,6 +146,63 @@ def bench_estop():
     return statistics.median(lat), max(lat)
 
 
+def bench_localization(trials: int = 5):
+    """Particle filter vs raw odometry on a scripted route, and global search."""
+    from robot.localization.localizer import compose, inverse
+    from robot.localization.mcl import Beam, ParticleFilter
+    from robot.mapping.occupancy_grid import OccupancyGrid
+    from robot.simulation.world import SimWorld
+    cfg = load_config()
+    w = SimWorld(cfg["simulation"]["world"], cfg["chassis"], seed=1)
+    g = OccupancyGrid.from_config(cfg["mapping"])
+    w.reference_grid(g)
+    truth = [(-0.5 + i * 0.05, -0.3, 0.0) for i in range(30)] + \
+            [(1.0, -0.3 + i * 0.05, math.pi / 2) for i in range(20)]
+
+    def beams(pose, rng, n=72):
+        out = []
+        for k in range(n):
+            a = -math.pi + 2 * math.pi * k / n
+            d = w.raycast(pose[0], pose[1], pose[2] + a, 6.0)
+            out.append(Beam(a, None if d is None else d + rng.normal(0, 0.01), 6.0))
+        return out
+
+    track_err, odom_err, ms, glob_err = [], [], [], []
+    for t in range(trials):
+        rng = np.random.default_rng(100 + t)
+        odom = [truth[0]]
+        for i in range(1, len(truth)):
+            rel = compose(inverse(truth[i - 1]), truth[i])
+            rel = (rel[0] * 1.06, rel[1] * 1.06, rel[2] + rng.normal(0.005, 0.003))
+            odom.append(compose(odom[-1], rel))
+        pf = ParticleFilter(n=400, seed=t)
+        pf.set_map(g)
+        pf.init_pose(*truth[0], std_xy=0.05, std_th=0.05)
+        for i in range(1, len(truth)):
+            pf.predict(odom[i - 1], odom[i])
+            t0 = time.perf_counter()
+            pf.update(beams(truth[i], rng))
+            ms.append((time.perf_counter() - t0) * 1000)
+        est, _, _ = pf.estimate()
+        track_err.append(math.dist(est[:2], truth[-1][:2]))
+        odom_err.append(math.dist(odom[-1][:2], truth[-1][:2]))
+        # global: kidnapped at a random free spot, search + a slow spin
+        gx, gy = w.free_position(0.3)
+        gth = float(rng.uniform(-math.pi, math.pi))
+        pg = ParticleFilter(n=400, seed=t)
+        pg.set_map(g)
+        pg.init_global_search(beams((gx, gy, gth), rng))
+        prev = (gx, gy, gth)
+        for k in range(1, 15):
+            cur = (gx, gy, gth + 0.15 * k)
+            pg.predict(prev, cur)
+            pg.update(beams(cur, rng))
+            prev = cur
+        est, _, _ = pg.estimate()
+        glob_err.append(math.dist(est[:2], (gx, gy)))
+    return {"track": track_err, "odom": odom_err, "ms": statistics.median(ms), "global": glob_err}
+
+
 def bench_sorting(minutes):
     from robot.runtime import Robot
     cfg = load_config(overrides={"robot": {"mode": "simulation"}, "simulation": {"pickup_failure_rate": 0.1}})
@@ -181,6 +238,15 @@ def main() -> int:
     pl = bench_planner(cfg)
     for algo, (t, n) in pl.items():
         print(f"| {algo} on 160x160 grid, diagonal route | {t:.1f} ms ({n} cells) |")
+    lb = bench_localization()
+    print(f"| Odometry error after a 2.5 m route (6 % scale + heading drift) | median "
+          f"{statistics.median(lb['odom']) * 100:.1f} cm |")
+    print(f"| MCL tracking error, same route, simulated LiDAR, 400 particles | median "
+          f"{statistics.median(lb['track']) * 100:.1f} cm, max {max(lb['track']) * 100:.1f} cm |")
+    ok = sum(1 for e in lb["global"] if e < 0.2)
+    print(f"| Global localisation from a random kidnap (search + 2 rad spin) | {ok}/{len(lb['global'])} within 20 cm "
+          f"(median {statistics.median(lb['global']) * 100:.1f} cm) |")
+    print(f"| Particle filter update (400 particles, 36 beams) | {lb['ms']:.2f} ms median |")
     med, worst = bench_estop()
     print(f"| Software e-stop latency (call → motor stop) | median {med:.1f} µs, max {worst:.1f} µs |")
     if args.sorting:
