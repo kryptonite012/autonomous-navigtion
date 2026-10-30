@@ -93,6 +93,7 @@ class Navigator:
         self._spin_until = 0.0
         self._no_frontier_count = 0
         self._best_dist = math.inf
+        self._best_head_err = math.inf
         self._lock = threading.RLock()
         self.distance_remaining: Optional[float] = None
 
@@ -339,9 +340,16 @@ class Navigator:
                     return self._begin_recovery(now, f"planning failed: {self.message}")
                 self.path, self.path_idx = path, 0
 
-            # stuck detection: the distance to the goal must keep shrinking
-            if self._progress_pose is None or dist < self._best_dist - 0.05:
-                self._progress_pose, self._progress_t, self._best_dist = pose, now, dist
+            # stuck detection: the distance to the goal must keep shrinking, or
+            # the robot must be turning towards the path (turning on the spot
+            # before driving off is progress, spinning in a dead end is not)
+            nxt = self.path[min(self.path_idx, len(self.path) - 1)] if self.path else (g.x, g.y)
+            head_err = abs(normalize_angle(math.atan2(nxt[1] - pose[1], nxt[0] - pose[0]) - pose[2]))
+            fresh = self._progress_pose is None
+            if fresh or dist < self._best_dist - 0.05 or head_err < self._best_head_err - 0.2:
+                self._best_dist = dist if fresh else min(dist, self._best_dist)
+                self._best_head_err = head_err
+                self._progress_pose, self._progress_t = pose, now
             elif now - self._progress_t > self.stuck_timeout:
                 return self._begin_recovery(now, "no progress (stuck)")
 
