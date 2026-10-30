@@ -15,6 +15,7 @@ def cfg(tmp_path):
     return load_config(overrides={
         "robot": {"mode": "simulation"},
         "mapping": {"maps_dir": str(tmp_path / "maps")},
+        "recording": {"dir": str(tmp_path / "recordings")},
         "simulation": {"pickup_failure_rate": 0.0},
     })
 
