@@ -143,3 +143,38 @@ def test_tinted_floor_is_not_an_object(detector):
     # object on a blue floor is not separable by colour: documented limitation)
     dets, _ = detector.detect(scene([("red", (320, 240), 40)], bg=(102, 75, 56), seed=3))
     assert [d.color for d in dets] == ["red"]
+
+
+@pytest.mark.parametrize("shape", ["circle", "square", "rectangle", "triangle"])
+def test_shape_classification(detector, shape):
+    img = scene([])
+    c = BGR["blue"]
+    if shape == "circle":
+        cv2.circle(img, (320, 240), 50, c, -1)
+    elif shape == "square":
+        cv2.rectangle(img, (270, 190), (370, 290), c, -1)
+    elif shape == "rectangle":
+        cv2.rectangle(img, (240, 210), (400, 270), c, -1)
+    else:
+        cv2.fillPoly(img, [np.array([[320, 170], [390, 300], [250, 300]])], c)
+    dets, _ = detector.detect(img)
+    assert [d.shape for d in dets] == [shape]
+
+
+@pytest.mark.parametrize("cast", [(0.7, 0.95, 1.25), (1.25, 1.0, 0.75), (0.9, 1.2, 0.9)])
+def test_reference_white_balance_restores_colours(cfg, cast):
+    objs = [("red", (130, 200), 35), ("green", (260, 200), 35), ("blue", (390, 200), 35), ("yellow", (520, 200), 35)]
+    img = np.clip(scene(objs).astype(np.float32) * np.array(cast), 0, 255).astype(np.uint8)
+    white = np.clip(np.full((40, 40, 3), 200, np.float32) * np.array(cast), 0, 255).astype(np.uint8)
+    p = VisionParams.from_config(cfg["vision"])
+    p.white_balance = "reference"
+    p.wb_gains = ColorDetector.reference_gains(white, (0, 0, 40, 40))
+    dets, _ = ColorDetector(p).detect(img)
+    assert sorted(d.color for d in dets) == ["blue", "green", "red", "yellow"]
+
+
+def test_reference_gains_reject_bad_patch():
+    with pytest.raises(ValueError):
+        ColorDetector.reference_gains(np.full((20, 20, 3), 10, np.uint8), (0, 0, 20, 20))
+    with pytest.raises(ValueError):
+        ColorDetector.reference_gains(np.full((20, 20, 3), 255, np.uint8), (0, 0, 20, 20))

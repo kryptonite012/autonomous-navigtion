@@ -30,6 +30,7 @@ class Detection:
     bearing_rad: Optional[float] = None
     solidity: float = 0.0
     circularity: float = 0.0
+    shape: str = "unknown"                   # circle | square | rectangle | triangle | other
 
     def as_dict(self) -> dict:
         d = asdict(self)
@@ -48,6 +49,8 @@ class VisionParams:
     min_solidity: float = 0.6
     min_confidence: float = 0.45
     min_contrast: float = 20.0      # Lab distance between blob and its surroundings
+    white_balance: str = "off"      # off | gray_world | reference
+    wb_gains: tuple[float, float, float] = (1.0, 1.0, 1.0)   # BGR gains for "reference"
     colors: dict[str, list[HSVRange]] = field(default_factory=dict)
     enabled_colors: list[str] = field(default_factory=list)
 
@@ -59,6 +62,8 @@ class VisionParams:
                    min_area_px=vc["min_area_px"], max_area_ratio=vc["max_area_ratio"],
                    min_solidity=vc["min_solidity"], min_confidence=vc["min_confidence"],
                    min_contrast=vc.get("min_contrast", 20.0),
+                   white_balance=vc.get("white_balance", "off"),
+                   wb_gains=tuple(vc.get("wb_gains", (1.0, 1.0, 1.0))),
                    colors=colors, enabled_colors=list(vc.get("enabled_colors", colors.keys())))
 
     def colors_as_config(self) -> dict:
@@ -82,6 +87,57 @@ class ColorDetector:
         self.calibrated = calibrated
 
     # ------------------------------------------------------------ preprocessing
+    @staticmethod
+    def gray_world(frame: np.ndarray) -> np.ndarray:
+        """Gray-world white balance: scale each channel so the scene average is grey.
+
+        Removes the colour cast of warm (tungsten) or cool (LED/daylight)
+        lighting before HSV thresholds are applied. Very dark and saturated
+        pixels are excluded from the averages. It assumes the scene is mostly
+        neutral (floor, walls), which holds for this robot's camera view.
+        """
+        f = frame.astype(np.float32)
+        lum = f.mean(axis=2)
+        sel = (lum > 30) & (lum < 230)
+        if sel.sum() < 0.05 * lum.size:
+            return frame
+        means = np.array([f[:, :, i][sel].mean() for i in range(3)])
+        gain = means.mean() / np.maximum(means, 1.0)
+        gain = np.clip(gain, 0.5, 2.0)
+        return np.clip(f * gain[None, None, :], 0, 255).astype(np.uint8)
+
+    @staticmethod
+    def reference_gains(frame: np.ndarray, roi: tuple[int, int, int, int]) -> tuple[float, float, float]:
+        """BGR gains that make a white/grey reference patch neutral."""
+        x, y, w, h = roi
+        patch = frame[y:y + h, x:x + w].reshape(-1, 3).astype(np.float32)
+        if patch.size == 0:
+            raise ValueError("ROI outside frame")
+        means = patch.mean(axis=0)
+        if means.min() < 40:
+            raise ValueError("reference patch too dark: use a white or light grey sheet")
+        if means.max() > 250:
+            raise ValueError("reference patch saturated: reduce exposure or use light grey")
+        gains = np.clip(means.mean() / means, 0.5, 2.0)
+        return tuple(round(float(g), 4) for g in gains)
+
+    @staticmethod
+    def classify_shape(contour, circularity: float) -> str:
+        perim = cv2.arcLength(contour, True)
+        approx = cv2.approxPolyDP(contour, 0.04 * perim, True)
+        n = len(approx)
+        if circularity > 0.82 and n > 4:
+            return "circle"
+        if n == 3:
+            return "triangle"
+        if n == 4:
+            (_, _), (rw, rh), _ = cv2.minAreaRect(contour)
+            ratio = max(rw, rh) / max(1e-6, min(rw, rh))
+            return "square" if ratio < 1.2 else "rectangle"
+        if circularity > 0.75:
+            return "circle"
+        return "other"
+
     def preprocess(self, frame: np.ndarray) -> np.ndarray:
         k = _odd(self.params.blur_kernel)
         blurred = cv2.GaussianBlur(frame, (k, k), 0)
@@ -101,6 +157,10 @@ class ColorDetector:
     def detect(self, frame: np.ndarray, colors: Optional[list[str]] = None,
                timestamp: Optional[float] = None) -> tuple[list[Detection], dict[str, np.ndarray]]:
         ts = timestamp or time.time()
+        if self.params.white_balance == "gray_world":
+            frame = self.gray_world(frame)
+        elif self.params.white_balance == "reference" and self.params.wb_gains != (1.0, 1.0, 1.0):
+            frame = np.clip(frame.astype(np.float32) * np.array(self.params.wb_gains, np.float32), 0, 255).astype(np.uint8)
         hsv = self.preprocess(frame)
         lab = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB)
         h, w = frame.shape[:2]
@@ -133,7 +193,8 @@ class ColorDetector:
                 if conf < self.params.min_confidence:
                     continue
                 det = Detection(color, (x, y, bw, bh), (cx, cy), area, conf, ts,
-                                solidity=round(solidity, 3), circularity=round(circularity, 3))
+                                solidity=round(solidity, 3), circularity=round(circularity, 3),
+                                shape=self.classify_shape(c, circularity))
                 self._estimate_range(det, w, h)
                 out.append(det)
         out = self._suppress_overlaps(out)
