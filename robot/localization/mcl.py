@@ -61,6 +61,7 @@ class ParticleFilter:
         self.dist_field: Optional[np.ndarray] = None
         self.free_cells: Optional[np.ndarray] = None
         self.last_likelihood = 0.0
+        self._pending_inject = 0
         self.w_slow = 0.0
         self.w_fast = 0.0
         self.updates = 0
@@ -196,6 +197,18 @@ class ParticleFilter:
         if len(hits) > self.max_beams:
             step = len(hits) / self.max_beams
             hits = [hits[int(i * step)] for i in range(self.max_beams)]
+        if self._pending_inject and self.free_cells is not None:
+            # random particles are inserted *before* weighting so this scan
+            # immediately rates them; inserted after resampling they would
+            # count as equally likely and inflate the spread estimate
+            k, self._pending_inject = self._pending_inject, 0
+            keep = self.particles.copy()
+            keep_w = self.weights.copy()
+            self.init_global(resize=False)
+            self.particles[k:] = keep[k:]
+            self.weights = keep_w
+            self.weights[:k] = 1.0 / self.n
+            self.weights /= self.weights.sum()
         ang = np.array([b.angle for b in hits])
         dist = np.array([b.distance for b in hits])
         ox = np.array([b.origin[0] for b in hits])
@@ -210,12 +223,14 @@ class ParticleFilter:
         d = self.grid.sample_field(self.dist_field, ex, ey)
         prob = self.z_hit * np.exp(-0.5 * (d / self.sigma_hit) ** 2) + self.z_rand
         log_w = np.log(prob).sum(axis=1)
-        # mean per-beam likelihood, used to detect kidnapping
-        self.last_likelihood = float(np.exp(log_w / len(hits)).mean())
+        per_particle = np.exp(log_w / len(hits))         # mean per-beam likelihood of each particle
         log_w += np.log(np.maximum(self.weights, 1e-300))
         log_w -= log_w.max()
         w = np.exp(log_w)
         self.weights = w / w.sum()
+        # how well the filter's belief explains the scan (weighted, so a few
+        # stray particles don't make a good fit look poor); detects kidnapping
+        self.last_likelihood = float(np.sum(self.weights * per_particle))
         # long/short term averages (augmented MCL)
         self.w_slow += 0.02 * (self.last_likelihood - self.w_slow) if self.w_slow else self.last_likelihood
         self.w_fast += 0.3 * (self.last_likelihood - self.w_fast) if self.w_fast else self.last_likelihood
@@ -246,11 +261,7 @@ class ParticleFilter:
         self.weights[:] = 1.0 / n
         # inject random particles if the fast average fell well below the slow one
         p_random = max(0.0, 1.0 - self.w_fast / self.w_slow) if self.w_slow > 0 else 0.0
-        k = int(min(0.25, max(p_random, extra_random)) * n)
-        if k > 0 and self.free_cells is not None:
-            keep = self.particles.copy()
-            self.init_global(resize=False)
-            self.particles[k:] = keep[k:]
+        self._pending_inject = int(min(0.25, max(p_random, extra_random)) * n)
 
     # -------------------------------------------------------------- estimate
     def estimate(self) -> tuple[tuple[float, float, float], float, float]:

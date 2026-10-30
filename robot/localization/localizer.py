@@ -132,7 +132,11 @@ class Localizer:
             moved = math.dist(odom_pose[:2], self._last_odom[:2])
             turned = abs(math.atan2(math.sin(odom_pose[2] - self._last_odom[2]),
                                     math.cos(odom_pose[2] - self._last_odom[2])))
-            if moved < self.update_dist and turned < self.update_angle and not self._pending_global:
+            # when not converged keep updating while standing still, otherwise
+            # a lost robot that stops (as it must) would never recover
+            idle_refresh = not self.converged and time.time() - self.last_update > 0.5
+            if moved < self.update_dist and turned < self.update_angle and not self._pending_global \
+                    and not idle_refresh:
                 return
             t0 = time.perf_counter()
             beams = self._beams(ranges, scan)
