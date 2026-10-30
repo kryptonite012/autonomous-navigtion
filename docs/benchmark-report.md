@@ -29,6 +29,11 @@ Host: x86-64 Linux VM · Python 3.13 · OpenCV 5.0
 | Software e-stop latency (`emergency_stop()` → `motors.stop()` issued) | median 0.1 µs, max 1.3 µs | software path only |
 | Simulated sorting, 3 min, 10 % random pickup failure | 5/5 objects in correct bin, all bin-sensor verified | ✅ simulation |
 | Dashboard telemetry rate (WebSocket) | 10 Hz configured | ✅ |
+| *(v1.1)* Odometry error after a 2.5 m route (6 % scale error + heading drift) | median 20.3 cm | — |
+| *(v1.1)* MCL tracking error, same route, simulated LiDAR, 400 particles | median 4.3 cm, max 4.4 cm (5 trials) | — |
+| *(v1.1)* Global localisation from a random kidnap (search + 2 rad spin) | 5/5 within 20 cm, median 3.3 cm | — |
+| *(v1.1)* Particle filter update (400 particles, 36 beams) | 0.99 ms median | — |
+| *(v1.1)* Simulated sorting with object map, 3 min | 5/5 objects in correct bin, all bin-sensor verified | ✅ simulation |
 | Control loop | 20 Hz configured | ✅ |
 
 Before the contrast check was added, the same accuracy set produced 102
@@ -50,6 +55,8 @@ specular highlights, shadows and colour casts.
 | Detection FPS (benchmark.py) | |
 | Detection FPS in the running service (`/api/vision/status` fps) | |
 | CPU temperature after 10 min of sorting | |
+| Particle filter update time (`/api/localization/status` update_ms) | |
+| MCL error vs measured floor marks (LiDAR) | |
 | Control loop rate / overruns (`/api/system/status`) | |
 | Real-object classification (100 objects, list lighting) | |
 | Physical sorting success (20 objects) | |
