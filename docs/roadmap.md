@@ -50,12 +50,16 @@ on hardware · ⏳ not started / needs hardware · ❌ out of scope for now
 
 | Item | Status |
 |---|---|
+| Odometry EKF (encoders + gyro, covariance) | ✅ (v1.1) |
+| Monte Carlo localisation on saved maps, correlative global search | ✅ simulation with LiDAR (v1.1) |
+| Waypoint missions, patrol loops, skip/abort policy | ✅ simulation (v1.1) |
+| Automatic return to dock on low battery | ✅ simulation (v1.1) |
 | A*, Dijkstra, path simplification, clearance cost | ✅ |
 | Pure pursuit, replanning, recovery, localisation-loss hold | ✅ |
 | Frontier exploration | ✅ simulation |
 | Named locations / return home | ✅ |
 | Nav2 integration (params, launch, base node) | 🟡 (not built) |
-| AMCL localisation on a saved map | 🟡 (Nav2 only) |
+| AMCL localisation on a saved map | 🟡 (Nav2 only; built-in MCL ✅ simulation) |
 
 ## Phase 6 — Sorting
 
@@ -67,13 +71,14 @@ on hardware · ⏳ not started / needs hardware · ❌ out of scope for now
 | Break-beam verification; `unverified` without sensor | ✅ |
 | Real arm poses, physical sorting rate | ⏳ |
 | Load-cell verification | ⏳ (optional hardware) |
+| Object map; sorter drives to remembered objects | ✅ simulation (v1.1) |
 
 ## Phase 7 — Dashboard
 
 | Item | Status |
 |---|---|
 | FastAPI REST + WebSocket + MJPEG | ✅ |
-| 12 dashboard screens | ✅ (checked in browser against the simulator) |
+| 12 dashboard screens + Missions + Simulation control room | ✅ (checked in browser against the simulator) |
 | Live telemetry charts, alerts | ✅ |
 
 ## Phase 8 — Production readiness
@@ -84,6 +89,8 @@ on hardware · ⏳ not started / needs hardware · ❌ out of scope for now
 | Network allow-list, rate limiting, audit log | ✅ |
 | Migrations, backups, retention | ✅ |
 | Docker Compose | 🟡 (not built in CI) |
+| Prometheus metrics | ✅ (v1.1) |
+| Fault-injection test bench (simulation) | ✅ (v1.1) |
 | Hardware-in-the-loop tests | ⏳ written, not run |
 | Documentation | ✅ |
 
