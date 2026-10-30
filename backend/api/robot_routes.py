@@ -320,10 +320,8 @@ def map_save(body: MapName, request: Request, _: CurrentUser = Depends(operator)
 @mapping.post("/load")
 def map_load(body: MapName, request: Request, _: CurrentUser = Depends(operator),
              c: AppContainer = Depends(container)):
-    if c.robot.navigator.active or c.robot.mapper.active:
-        raise HTTPException(409, "stop mapping/navigation before loading a map")
     try:
-        c.robot.mapper.load(body.name)
+        _run(c.robot.load_map, body.name)
     except FileNotFoundError as exc:
         raise HTTPException(404, str(exc))
     audit(c, request, "map_load", body.name)
