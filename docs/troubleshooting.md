@@ -41,6 +41,17 @@ missing device has a reason.
 | Navigation `waiting_localization` | encoders not responding | check encoder wiring; the robot holds still by design |
 | Endless recoveries | tight space smaller than robot + inflation | reduce inflation slightly or clear the area |
 
+## Localisation and missions
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| Pose source says `ekf` although a map is loaded | no LiDAR and `localization.mode: auto` | expected; add a LiDAR or set `mode: on` (experimental) |
+| Navigation refused: `localisation lost: set the initial pose` | particle cloud spread > 0.5 m | *Navigation → Set pose on map*; with LiDAR also **Global** |
+| Status stays `searching` after Global | robot has not moved/turned, or the room is symmetric | spin the robot slowly; drive near a distinctive feature |
+| Estimate jumps after bumping furniture | wheel slip against an obstacle | expected with blind spots (see localization.md); re-localise |
+| Mission skips every waypoint | waypoints inside inflated obstacles or unknown space | place waypoints in free (white) map area, at least 20 cm from walls |
+| Robot heads for the dock in the middle of a task | battery below `navigation.return_voltage` | charge; tune the voltage in the config |
+
 ## Vision and sorting
 
 | Symptom | Cause | Fix |
@@ -52,6 +63,7 @@ missing device has a reason.
 | Always `failed_verification` | break-beam misaligned | *Sensors*/HIL test `test_bin_sensor_counts_drop` |
 | Only `unverified` results | no bin sensor configured | install the break-beam — results are never reported as success without it |
 | Low FPS on Pi | CPU throttling, high resolution | check cooling/temperature; use 640×480; disable colours you don't need |
+| No objects on the map | camera not calibrated | run `scripts/calibrate_camera.py` and set mount height/pitch (simulation is calibrated by construction) |
 
 ## Dashboard
 
