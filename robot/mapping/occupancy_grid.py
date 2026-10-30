@@ -78,7 +78,12 @@ class OccupancyGrid:
         c0 = self.world_to_cell(ox, oy)
         for off in offsets:
             a = angle + off
-            ex, ey = ox + reach * math.cos(a), oy + reach * math.sin(a)
+            # push a hit a quarter cell past the surface: a surface lying on a
+            # cell boundary would otherwise be marked behind the wall for rays
+            # travelling +x/+y but in front of it for -x/-y, shifting the map
+            # by half a cell
+            ext = 0.25 * self.resolution if distance is not None else 0.0
+            ex, ey = ox + (reach + ext) * math.cos(a), oy + (reach + ext) * math.sin(a)
             c1 = self.world_to_cell(ex, ey)
             cells = list(bresenham(c0[0], c0[1], c1[0], c1[1]))
             hit = distance is not None and off == 0.0
@@ -154,6 +159,23 @@ class OccupancyGrid:
             "unknown_ratio": round(float((t == UNKNOWN).sum()) / total, 4),
             "updates": self.updates,
         }
+
+    def sample_field(self, field: np.ndarray, wx: np.ndarray, wy: np.ndarray, outside: float = 1.0) -> np.ndarray:
+        """Bilinear lookup of a per-cell field (e.g. a distance transform) at
+        continuous world coordinates; cell values live at cell centres."""
+        fx = (np.asarray(wx) - self.origin[0]) / self.resolution - 0.5
+        fy = (np.asarray(wy) - self.origin[1]) / self.resolution - 0.5
+        x0 = np.floor(fx).astype(np.int64)
+        y0 = np.floor(fy).astype(np.int64)
+        tx, ty = fx - x0, fy - y0
+        inside = (x0 >= 0) & (x0 < self.width - 1) & (y0 >= 0) & (y0 < self.height - 1)
+        out = np.full(np.shape(fx), outside, np.float64)
+        if inside.any():
+            xi, yi = x0[inside], y0[inside]
+            a, b = tx[inside], ty[inside]
+            out[inside] = ((1 - a) * (1 - b) * field[yi, xi] + a * (1 - b) * field[yi, xi + 1]
+                           + (1 - a) * b * field[yi + 1, xi] + a * b * field[yi + 1, xi + 1])
+        return out
 
     def inflated_obstacles(self, radius_m: float, allow_unknown: bool = False) -> np.ndarray:
         """Boolean cost mask: True where the robot centre must not go."""
