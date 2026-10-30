@@ -16,8 +16,14 @@ fully offline and comes with a web dashboard for live control.
 * **Localisation that does not drift**: an odometry EKF (encoders + gyro)
   plus Monte Carlo localisation against saved maps, with global
   re-localisation after a kidnap (needs a LiDAR).
-* **Missions**: waypoint tours and patrol loops, with automatic return to
-  the dock on low battery.
+* **Mapping without ROS**: LiDAR scan-to-map matching keeps maps sharp
+  (simulated drift 31 cm → under 2 cm).
+* **Obstacle avoidance**: a Dynamic Window Approach local planner steers
+  around obstacles that are not on the map.
+* **Missions**: waypoint tours, patrol loops, generated coverage sweeps,
+  weekday schedules, and automatic return to the dock on low battery.
+* **Flight recorder**: record raw sensor data on the robot and replay it
+  offline (`scripts/replay.py`) to tune algorithms on a laptop.
 * **Test bench**: a simulation control room for fault injection, kidnapping,
   obstacles and scenarios, plus Prometheus metrics.
 * **Honest results**: a sort counts as successful only when the bin sensor
@@ -75,7 +81,8 @@ wire the robot following [wiring.md](docs/hardware/wiring.md), then run
 | Topic | Document |
 |---|---|
 | System architecture, threads, safety design | [docs/architecture.md](docs/architecture.md) |
-| Localisation (EKF, particle filter, global search) | [docs/localization.md](docs/localization.md) |
+| Localisation (EKF, particle filter, global search, scan matching) | [docs/localization.md](docs/localization.md) |
+| Navigation (planners, DWA, missions, coverage, schedules) | [docs/navigation.md](docs/navigation.md) |
 | Changes per release | [CHANGELOG.md](CHANGELOG.md) |
 | Bill of materials (INR), compatibility matrix | [docs/hardware/bom.md](docs/hardware/bom.md) |
 | Power, e-stop circuit, GPIO pinout, wiring | [docs/hardware/wiring.md](docs/hardware/wiring.md) |

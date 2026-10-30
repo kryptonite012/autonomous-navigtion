@@ -24,6 +24,7 @@ on hardware · ⏳ not started / needs hardware · ❌ out of scope for now
 | Centroid tracker | ✅ |
 | Calibration (sample from camera, manual sliders, persist) | ✅ |
 | Distance estimate (calibrated camera, flat floor only) | 🟡 |
+| Shape classification, white balance (gray-world / reference) | ✅ synthetic (v1.2) |
 | Real-camera accuracy test | ⏳ |
 
 ## Phase 3 — Mobility
@@ -45,6 +46,7 @@ on hardware · ⏳ not started / needs hardware · ❌ out of scope for now
 | Experimental range-sensor mapping | ✅ simulation |
 | RPLIDAR driver (built-in) | 🟡 |
 | SLAM Toolbox configuration | 🟡 (not run) |
+| Built-in LiDAR scan matching while mapping (no ROS) | ✅ simulation (v1.2) |
 
 ## Phase 5 — Autonomous navigation
 
@@ -54,6 +56,8 @@ on hardware · ⏳ not started / needs hardware · ❌ out of scope for now
 | Monte Carlo localisation on saved maps, correlative global search | ✅ simulation with LiDAR (v1.1) |
 | Waypoint missions, patrol loops, skip/abort policy | ✅ simulation (v1.1) |
 | Automatic return to dock on low battery | ✅ simulation (v1.1) |
+| DWA local planner (default), unmapped/moving obstacles | ✅ simulation (v1.2) |
+| Coverage missions, mission schedules | ✅ (v1.2) |
 | A*, Dijkstra, path simplification, clearance cost | ✅ |
 | Pure pursuit, replanning, recovery, localisation-loss hold | ✅ |
 | Frontier exploration | ✅ simulation |
@@ -91,6 +95,8 @@ on hardware · ⏳ not started / needs hardware · ❌ out of scope for now
 | Docker Compose | 🟡 (not built in CI) |
 | Prometheus metrics | ✅ (v1.1) |
 | Fault-injection test bench (simulation) | ✅ (v1.1) |
+| Flight recorder + offline replay | ✅ (v1.2) |
+| Responsive (phone) dashboard | ✅ (v1.2) |
 | Hardware-in-the-loop tests | ⏳ written, not run |
 | Documentation | ✅ |
 
