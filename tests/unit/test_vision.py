@@ -131,3 +131,13 @@ def test_validate_range():
         validate_range([10, 0, 0], [5, 255, 255])
     with pytest.raises(ValueError):
         validate_range([0, 0, 0], [200, 255, 255])
+
+
+def test_tinted_floor_is_not_an_object(detector):
+    # bluish floor with sensor noise: saturated enough to pass the blue HSV
+    # range, but it is the background, not an object
+    img = scene([], bg=(102, 75, 56), noise=12, seed=3)
+    dets, _ = detector.detect(img)
+    assert dets == []
+    dets, _ = detector.detect(scene([("blue", (320, 240), 40)], bg=(102, 75, 56), seed=3))
+    assert [d.color for d in dets] == ["blue"]

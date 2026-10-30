@@ -108,6 +108,7 @@ vision:
   max_area_ratio: 0.6
   min_solidity: 0.6
   min_confidence: 0.45
+  min_contrast: 20.0
   track_max_distance_px: 60
   track_max_missed: 8
   colors:

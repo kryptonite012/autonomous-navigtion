@@ -47,6 +47,7 @@ class VisionParams:
     max_area_ratio: float = 0.6
     min_solidity: float = 0.6
     min_confidence: float = 0.45
+    min_contrast: float = 20.0      # Lab distance between blob and its surroundings
     colors: dict[str, list[HSVRange]] = field(default_factory=dict)
     enabled_colors: list[str] = field(default_factory=list)
 
@@ -57,6 +58,7 @@ class VisionParams:
         return cls(blur_kernel=vc["blur_kernel"], morph_kernel=vc["morph_kernel"],
                    min_area_px=vc["min_area_px"], max_area_ratio=vc["max_area_ratio"],
                    min_solidity=vc["min_solidity"], min_confidence=vc["min_confidence"],
+                   min_contrast=vc.get("min_contrast", 20.0),
                    colors=colors, enabled_colors=list(vc.get("enabled_colors", colors.keys())))
 
     def colors_as_config(self) -> dict:
@@ -100,6 +102,7 @@ class ColorDetector:
                timestamp: Optional[float] = None) -> tuple[list[Detection], dict[str, np.ndarray]]:
         ts = timestamp or time.time()
         hsv = self.preprocess(frame)
+        lab = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB)
         h, w = frame.shape[:2]
         max_area = self.params.max_area_ratio * h * w
         out: list[Detection] = []
@@ -124,6 +127,8 @@ class ColorDetector:
                 m = cv2.moments(c)
                 cx, cy = m["m10"] / m["m00"], m["m01"] / m["m00"]
                 fill = area / float(bw * bh)
+                if self._contrast(lab, c, x, y, bw, bh) < self.params.min_contrast:
+                    continue        # same colour as its surroundings: floor/wall tint, not an object
                 conf = self._confidence(hsv, mask, c, solidity, fill, area, x, y, bw, bh, w, h)
                 if conf < self.params.min_confidence:
                     continue
@@ -133,6 +138,23 @@ class ColorDetector:
                 out.append(det)
         out = self._suppress_overlaps(out)
         return out, masks
+
+    @staticmethod
+    def _contrast(lab: np.ndarray, contour, x: int, y: int, bw: int, bh: int) -> float:
+        """Lab colour distance between a blob and a ring around it."""
+        pad = max(4, int(0.3 * max(bw, bh)))
+        x0, y0 = max(0, x - pad), max(0, y - pad)
+        x1, y1 = min(lab.shape[1], x + bw + pad), min(lab.shape[0], y + bh + pad)
+        roi = lab[y0:y1, x0:x1]
+        inner = np.zeros(roi.shape[:2], np.uint8)
+        cv2.drawContours(inner, [contour - [x0, y0]], -1, 255, -1)
+        k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * pad + 1, 2 * pad + 1))
+        ring = cv2.subtract(cv2.dilate(inner, k), inner)
+        if cv2.countNonZero(ring) < 10:
+            return 255.0      # blob fills the image: nothing to compare against
+        a = np.array(cv2.mean(roi, mask=inner)[:3])
+        b = np.array(cv2.mean(roi, mask=ring)[:3])
+        return float(np.linalg.norm(a - b))
 
     def _confidence(self, hsv, mask, contour, solidity, fill, area, x, y, bw, bh, w, h) -> float:
         """Heuristic quality score in [0, 1].
