@@ -80,6 +80,9 @@ class Navigator:
         self._recover_phase = 0
         self._local_obstacles: list[tuple[float, float, float]] = []
         self._failed_frontiers: list[tuple[float, float]] = []
+        self._spin_until = 0.0
+        self._no_frontier_count = 0
+        self._best_dist = math.inf
         self._lock = threading.RLock()
         self.distance_remaining: Optional[float] = None
 
@@ -105,6 +108,9 @@ class Navigator:
             self.goal = None
             self._start()
             self.state = NavState.EXPLORING
+            # look around first so the sensors populate the map
+            self._spin_until = time.time() + 2 * math.pi / 0.8
+            self._no_frontier_count = 0
             self.on_event("exploration_started", "info", "frontier exploration started")
 
     def _start(self) -> None:
@@ -270,8 +276,15 @@ class Navigator:
             if self.state == NavState.RECOVERING:
                 return self._recover(now, pose)
 
+            if self.exploring and now < self._spin_until:
+                return 0.0, 0.8
             if self.exploring and (self.goal is None):
                 f = self.find_frontier(pose)
+                if f is None and self._no_frontier_count < 1:
+                    # spin once more before concluding: sparse sensors miss a lot
+                    self._no_frontier_count += 1
+                    self._spin_until = now + 2 * math.pi / 0.8
+                    return 0.0, 0.8
                 if f is None:
                     self.state = NavState.REACHED
                     self.exploring = False
@@ -279,8 +292,11 @@ class Navigator:
                     self.message = "exploration complete: no reachable frontiers left"
                     self.on_event("exploration_complete", "info", self.message)
                     return None
+                self._no_frontier_count = 0
                 self.goal = Goal(f[0], f[1], None, "frontier")
+                self.path, self.path_idx = [], 0
                 self._last_plan = 0.0
+                self._progress_pose = None
 
             g = self.goal
             dist = math.dist((pose[0], pose[1]), (g.x, g.y))
@@ -292,6 +308,7 @@ class Navigator:
                         return 0.0, math.copysign(min(1.0, 0.6 + abs(err)), err)
                 if self.exploring:
                     self.goal = None
+                    self.path = []
                     return None
                 self.state = NavState.REACHED
                 self.message = "goal reached"
@@ -299,8 +316,8 @@ class Navigator:
                 self.on_event("navigation_reached", "info", f"reached ({g.x:.2f}, {g.y:.2f})")
                 return None
 
-            need_plan = (not self.path or now - self._last_plan > self.replan_interval
-                         and self._path_blocked(pose))
+            need_plan = (not self.path or self._last_plan == 0.0
+                         or (now - self._last_plan > self.replan_interval and self._path_blocked(pose)))
             if need_plan:
                 path = self._plan_to(pose, g.x, g.y, self.allow_unknown or self.exploring)
                 self._last_plan = now
@@ -312,10 +329,9 @@ class Navigator:
                     return self._begin_recovery(now, f"planning failed: {self.message}")
                 self.path, self.path_idx = path, 0
 
-            # stuck detection
-            if self._progress_pose is None or math.dist(self._progress_pose[:2], pose[:2]) > 0.08 \
-                    or abs(normalize_angle(self._progress_pose[2] - pose[2])) > 0.5:
-                self._progress_pose, self._progress_t = pose, now
+            # stuck detection: the distance to the goal must keep shrinking
+            if self._progress_pose is None or dist < self._best_dist - 0.05:
+                self._progress_pose, self._progress_t, self._best_dist = pose, now, dist
             elif now - self._progress_t > self.stuck_timeout:
                 return self._begin_recovery(now, "no progress (stuck)")
 

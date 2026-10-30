@@ -51,6 +51,9 @@ def potential_field(ranges: list[RangeReading], v: float, w: float, influence: f
     vector; its lateral component turns the robot and its forward
     component slows it. The safety controller still enforces hard stops.
     """
+    if v <= 0.0:
+        # turning on the spot or reversing: repulsion would only fight the turn
+        return v, w
     fx = fy = 0.0
     for r in ranges:
         if not r.valid or r.distance_m is None or r.distance_m >= influence:
