@@ -137,3 +137,55 @@ class SafetySettings(BaseModel):
 
 class FaultClear(BaseModel):
     fault: str = Field(min_length=1, max_length=64)
+
+
+class WaypointIn(BaseModel):
+    x: Optional[float] = Field(default=None, ge=-100, le=100)
+    y: Optional[float] = Field(default=None, ge=-100, le=100)
+    theta: Optional[float] = Field(default=None, ge=-math.pi * 2, le=math.pi * 2)
+    location: Optional[str] = Field(default=None, max_length=64, pattern=r"^[A-Za-z0-9_\-]+$")
+    dwell_s: float = Field(default=0.0, ge=0, le=3600)
+
+
+class MissionIn(BaseModel):
+    waypoints: list[WaypointIn] = Field(min_length=1, max_length=100)
+    loop: bool = False
+    max_loops: int = Field(default=0, ge=0, le=1000)
+    return_home: bool = False
+    on_failure: str = Field(default="skip", pattern=r"^(skip|abort)$")
+
+
+class InitialPose(BaseModel):
+    x: float = Field(ge=-100, le=100)
+    y: float = Field(ge=-100, le=100)
+    theta: float = Field(default=0.0, ge=-math.pi * 2, le=math.pi * 2)
+
+
+class SimFaults(BaseModel):
+    motor_fault: Optional[bool] = None
+    encoder_fault: Optional[bool] = None
+    servo_fault: Optional[bool] = None
+    camera_covered: Optional[bool] = None
+    estop_pressed: Optional[bool] = None
+    battery_voltage: Optional[float] = Field(default=None, ge=5.0, le=8.5)
+    disconnected_sensors: Optional[list[str]] = Field(default=None, max_length=16)
+
+
+class SimObstacle(BaseModel):
+    x: float = Field(ge=-50, le=50)
+    y: float = Field(ge=-50, le=50)
+    radius: float = Field(default=0.1, ge=0.03, le=0.5)
+    vx: float = Field(default=0.0, ge=-0.5, le=0.5)
+    vy: float = Field(default=0.0, ge=-0.5, le=0.5)
+
+
+class SimScatter(BaseModel):
+    count: int = Field(default=6, ge=1, le=30)
+    colors: list[str] = Field(default_factory=lambda: ["red", "green", "blue", "yellow", "orange"],
+                              min_length=1, max_length=7)
+
+
+class SimTeleport(BaseModel):
+    x: float = Field(ge=-50, le=50)
+    y: float = Field(ge=-50, le=50)
+    theta: float = Field(default=0.0, ge=-math.pi * 2, le=math.pi * 2)
