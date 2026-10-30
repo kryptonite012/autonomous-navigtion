@@ -76,11 +76,22 @@ Raspberry Pi 5 · OpenCV · FastAPI · React · ROS 2 (optional)
 
 | | |
 |---|---|
-| Tests | 89 passed, 7 HIL pending |
+| Tests | 115 passed, 7 HIL pending |
 | Detection | 84 FPS on x86 VM (Pi not yet measured) |
 | Synthetic accuracy | 98.6 %, 0 false positives |
 | Simulated sorting | 5/5 correct, verified |
 | Navigation to goal | reached < 0.2 m, 0 collisions |
+| Localisation (sim LiDAR) | 4.3 cm vs 20 cm odometry; kidnap recovered 5/5 |
+
+---
+
+## v1.1: localisation, missions, test bench
+
+* Odometry EKF + Monte Carlo localisation; correlative global search
+* Waypoint missions and patrols; return to dock on low battery
+* Object map: the sorter drives to remembered objects
+* Simulation control room: fault injection, kidnapping, scenarios
+* Prometheus metrics
 
 ---
 

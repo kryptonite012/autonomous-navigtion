@@ -8,7 +8,7 @@ cd nexus
 python3 -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env            # NEXUS_MODE=simulation by default
-python3 -m pytest               # 89 tests, ~1 min; hardware tests are skipped
+python3 -m pytest               # 115 tests, ~2 min; hardware tests are skipped
 ```
 
 Run the backend and the dashboard dev server in two terminals:
