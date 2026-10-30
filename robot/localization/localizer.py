@@ -45,6 +45,7 @@ class Localizer:
         self.converged_xy = lc.get("converged_std_m", 0.15)
         self.converged_th = lc.get("converged_std_rad", 0.25)
         self.lost_xy = lc.get("lost_std_m", 0.5)
+        self.converged_likelihood = lc.get("converged_likelihood", 0.7)
         self.pf = ParticleFilter(n=lc.get("particles", 400), sigma_hit=lc.get("sigma_hit_m", 0.08),
                                  max_beams=lc.get("max_beams", 36), seed=lc.get("seed", 0))
         self.on_event = on_event or (lambda *a: None)
@@ -57,6 +58,7 @@ class Localizer:
         self.last_update = 0.0
         self.update_ms = 0.0
         self._last_odom: Optional[tuple[float, float, float]] = None
+        self._pending_global = False
         self._lock = threading.RLock()
 
     @property
@@ -102,9 +104,11 @@ class Localizer:
                 raise RuntimeError("load a map first (and enable localisation)")
             if not self.has_lidar:
                 raise RuntimeError("global localisation needs a LiDAR; set the initial pose instead")
-            self.pf.init_global()
+            # the search itself runs on the next scan (update())
+            self._pending_global = True
             self.converged = False
-            self.on_event("localization_global", "info", "particles spread over the whole map")
+            self.pf._resize(self.pf.n_track * self.pf.global_factor)   # marks the pose as 'searching'
+            self.on_event("localization_global", "info", "global localisation requested")
 
     # ---------------------------------------------------------------- update
     def map_pose(self, odom_pose: tuple[float, float, float]) -> tuple[float, float, float]:
@@ -123,27 +127,32 @@ class Localizer:
             moved = math.dist(odom_pose[:2], self._last_odom[:2])
             turned = abs(math.atan2(math.sin(odom_pose[2] - self._last_odom[2]),
                                     math.cos(odom_pose[2] - self._last_odom[2])))
-            if moved < self.update_dist and turned < self.update_angle:
+            if moved < self.update_dist and turned < self.update_angle and not self._pending_global:
                 return
             t0 = time.perf_counter()
+            beams = self._beams(ranges, scan)
+            if self._pending_global:
+                if scan is None and self.has_lidar:
+                    return                          # wait for the next full scan
+                self._pending_global = False
+                found = self.pf.init_global_search(beams)
+                self._last_odom = odom_pose
+                self.on_event("localization_global", "info",
+                              "global search done, tracking best candidates" if found
+                              else "scan too sparse for a global search: particles spread uniformly")
+                self.update_ms = (time.perf_counter() - t0) * 1000
+                return
             self.pf.predict(self._last_odom, odom_pose)
             self._last_odom = odom_pose
-            beams: list[Beam] = []
-            if scan is not None:
-                for i in range(0, len(scan.ranges), max(1, len(scan.ranges) // 72)):
-                    r = float(scan.ranges[i])
-                    beams.append(Beam(scan.angle_min + i * scan.angle_increment,
-                                      r if math.isfinite(r) else None, scan.range_max))
-            for r in ranges:
-                if r.valid:
-                    beams.append(Beam(r.angle_rad, r.distance_m, r.max_range_m,
-                                      (self.sensor_offset * math.cos(r.angle_rad),
-                                       self.sensor_offset * math.sin(r.angle_rad))))
             self.pf.update(beams)
             est, self.std_xy, self.std_th = self.pf.estimate()
             was = self.converged
-            self.converged = self.std_xy < self.converged_xy and self.std_th < self.converged_th
+            # a tight cloud is not enough: the scan must also match the map well,
+            # otherwise the filter may have collapsed onto a look-alike place
+            self.converged = (self.std_xy < self.converged_xy and self.std_th < self.converged_th
+                              and self.pf.last_likelihood >= self.converged_likelihood)
             if self.converged:
+                self.pf.shrink()
                 # only move the map frame when the filter is confident
                 self.correction = compose(est, inverse(odom_pose))
             if was and not self.converged and self.std_xy > self.lost_xy:
@@ -154,10 +163,29 @@ class Localizer:
             self.last_update = time.time()
             self.update_ms = (time.perf_counter() - t0) * 1000
 
+    def _beams(self, ranges: list[RangeReading], scan: Optional[LaserScan]) -> list[Beam]:
+        beams: list[Beam] = []
+        if scan is not None:
+            for i in range(0, len(scan.ranges), max(1, len(scan.ranges) // 72)):
+                r = float(scan.ranges[i])
+                beams.append(Beam(scan.angle_min + i * scan.angle_increment,
+                                  r if math.isfinite(r) else None, scan.range_max))
+        for r in ranges:
+            if r.valid:
+                beams.append(Beam(r.angle_rad, r.distance_m, r.max_range_m,
+                                  (self.sensor_offset * math.cos(r.angle_rad),
+                                   self.sensor_offset * math.sin(r.angle_rad))))
+        return beams
+
     def pose_ok(self) -> bool:
-        """False when map localisation is running but has lost track."""
+        """False when map localisation is running but has lost track, or is
+        still searching after a global localisation request."""
         with self._lock:
-            return not self.active or self.std_xy < self.lost_xy
+            if not self.active:
+                return True
+            if self.pf.n > self.pf.n_track:        # global search not finished
+                return False
+            return self.std_xy < self.lost_xy
 
     def status(self, with_particles: bool = False) -> dict:
         with self._lock:
@@ -172,6 +200,7 @@ class Localizer:
                 "std_xy": round(self.std_xy, 3) if self.active else None,
                 "std_theta": round(self.std_th, 3) if self.active else None,
                 "particles": self.pf.n,
+                "searching": self.active and self.pf.n > self.pf.n_track,
                 "neff": round(self.pf.neff(), 1),
                 "likelihood": round(self.pf.last_likelihood, 3),
                 "update_ms": round(self.update_ms, 2),
