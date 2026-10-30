@@ -1,0 +1,65 @@
+# Simulation (any machine):     docker compose up --build
+# Hardware on a Raspberry Pi:   docker compose --profile hardware up --build nexus-hw
+#
+# For hardware mode the native systemd install (deployment/systemd) is the
+# better-tested route: picamera2/libcamera are easier to use outside Docker.
+services:
+  nexus:
+    build:
+      context: .
+      dockerfile: deployment/Dockerfile
+    environment:
+      NEXUS_MODE: simulation
+      NEXUS_DATABASE_URL: sqlite:////opt/nexus/data/nexus.db
+    env_file:
+      - path: .env
+        required: false
+    ports:
+      - "8000:8000"
+    volumes:
+      - nexus-data:/opt/nexus/data
+      - nexus-backups:/opt/nexus/backups
+    restart: unless-stopped
+
+  nexus-hw:
+    profiles: ["hardware"]
+    build:
+      context: .
+      dockerfile: deployment/Dockerfile
+      args:
+        WITH_PI: "true"
+    environment:
+      NEXUS_MODE: hardware
+      NEXUS_DATABASE_URL: sqlite:////opt/nexus/data/nexus.db
+    env_file:
+      - path: .env
+        required: false
+    ports:
+      - "8000:8000"
+    devices:
+      - /dev/gpiochip0
+      - /dev/gpiochip4
+      - /dev/i2c-1
+      - /dev/video0
+      - /dev/ttyUSB0
+    group_add: ["dialout", "video"]
+    volumes:
+      - nexus-data:/opt/nexus/data
+      - nexus-backups:/opt/nexus/backups
+      - /run/udev:/run/udev:ro
+    restart: unless-stopped
+
+  postgres:
+    profiles: ["postgres"]
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: nexus
+      POSTGRES_USER: nexus
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+
+volumes:
+  nexus-data:
+  nexus-backups:
+  pg-data:
