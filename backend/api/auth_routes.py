@@ -31,28 +31,32 @@ def login(body: LoginRequest, request: Request, c: AppContainer = Depends(contai
     if not c.login_limiter.allow(f"login:{ip}"):
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "too many login attempts, wait a minute")
     now = datetime.now(timezone.utc)
+    # decide inside the transaction, raise after it commits so the failed
+    # login counter is not rolled back by the exception
+    error = None
     with c.db.session() as s:
         user = s.execute(select(User).where(User.username == body.username)).scalar_one_or_none()
         if user is None:
             verify_password(body.password, _DUMMY_HASH)
-            audit(c, request, "login", "unknown user", False, username=body.username)
-            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid username or password")
-        if _aware(user.locked_until) and _aware(user.locked_until) > now:
-            audit(c, request, "login", "account locked", False, username=body.username)
-            raise HTTPException(status.HTTP_423_LOCKED, "account temporarily locked")
-        if not user.is_active or not verify_password(body.password, user.password_hash):
+            error = (status.HTTP_401_UNAUTHORIZED, "invalid username or password", "unknown user")
+        elif _aware(user.locked_until) and _aware(user.locked_until) > now:
+            error = (status.HTTP_423_LOCKED, "account temporarily locked", "account locked")
+        elif not user.is_active or not verify_password(body.password, user.password_hash):
             user.failed_logins += 1
             if user.failed_logins >= LOCKOUT_THRESHOLD:
                 user.locked_until = now + timedelta(minutes=LOCKOUT_MINUTES)
                 user.failed_logins = 0
-            audit(c, request, "login", "bad password or inactive", False, username=body.username)
-            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid username or password")
-        user.failed_logins = 0
-        user.locked_until = None
-        sid = c.tokens.new_session_id()
-        token, exp = c.tokens.issue(sid, user.username, user.role)
-        s.add(AuthSession(id=sid, user_id=user.id, expires_at=exp, client_ip=ip))
-        username, role = user.username, user.role
+            error = (status.HTTP_401_UNAUTHORIZED, "invalid username or password", "bad password or inactive")
+        else:
+            user.failed_logins = 0
+            user.locked_until = None
+            sid = c.tokens.new_session_id()
+            token, exp = c.tokens.issue(sid, user.username, user.role)
+            s.add(AuthSession(id=sid, user_id=user.id, expires_at=exp, client_ip=ip))
+            username, role = user.username, user.role
+    if error:
+        audit(c, request, "login", error[2], False, username=body.username)
+        raise HTTPException(error[0], error[1])
     audit(c, request, "login", "ok", True, username=username)
     return TokenResponse(access_token=token, expires_at=exp.isoformat(), username=username, role=role)
 
@@ -82,13 +86,17 @@ def change_password(body: PasswordChange, request: Request, user: CurrentUser = 
     with c.db.session() as s:
         u = s.get(User, user.id)
         if not verify_password(body.current_password, u.password_hash):
-            audit(c, request, "password_change", "wrong current password", False)
-            raise HTTPException(status.HTTP_403_FORBIDDEN, "current password is incorrect")
-        u.password_hash = hash_password(body.new_password)
-        # revoke every other session of this user
-        for sess in s.execute(select(AuthSession).where(AuthSession.user_id == u.id)).scalars():
-            if sess.id != user.session_id:
-                sess.revoked = True
+            wrong = True
+        else:
+            wrong = False
+            u.password_hash = hash_password(body.new_password)
+            # revoke every other session of this user
+            for sess in s.execute(select(AuthSession).where(AuthSession.user_id == u.id)).scalars():
+                if sess.id != user.session_id:
+                    sess.revoked = True
+    if wrong:
+        audit(c, request, "password_change", "wrong current password", False)
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "current password is incorrect")
     audit(c, request, "password_change")
     return {"ok": True}
 
