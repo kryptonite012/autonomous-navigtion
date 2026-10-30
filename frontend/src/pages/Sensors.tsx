@@ -45,7 +45,9 @@ export default function Sensors() {
   const { data } = usePoll<Readings>("/api/sensors/readings", 500);
   const { state } = useRobot();
   const safety = state?.safety;
-  const cfgStop = 0.15, cfgSlow = 0.35;
+  const { data: cfg } = usePoll<{ safety: { emergency_stop_distance_m: number; slow_down_distance_m: number } }>("/api/system/config", 0);
+  const cfgStop = cfg?.safety.emergency_stop_distance_m ?? 0.15;
+  const cfgSlow = cfg?.safety.slow_down_distance_m ?? 0.35;
   return (
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
       <Card title="Obstacle view" actions={data?.simulated && <Pill tone="info">simulated sensors</Pill>}>
