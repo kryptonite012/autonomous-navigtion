@@ -239,6 +239,30 @@ class SimWorld:
             self.state = SimState(x, y, th)
             self.duty = (0.0, 0.0)
 
+    def reference_grid(self, grid, spacing: float = 0.35, beams: int = 90, max_range: float = 3.0):
+        """Fill ``grid`` with a map of the static world by ray casting from many
+        free positions. This is simulation ground truth, used for testing
+        localisation/navigation without exploring first."""
+        x0, y0, x1, y1 = self.bounds
+        saved = self.dynamic
+        self.dynamic = []
+        try:
+            x = x0 + spacing / 2
+            while x < x1:
+                y = y0 + spacing / 2
+                while y < y1:
+                    if not self._collides(x, y):
+                        for k in range(beams):
+                            a = 2 * math.pi * k / beams
+                            d = self.raycast(x, y, a, max_range)
+                            for _ in range(2):
+                                grid.integrate_ray(x, y, a, d, max_range)
+                    y += spacing
+                x += spacing
+        finally:
+            self.dynamic = saved
+        return grid
+
 
 def _ray_aabb(ox, oy, dx, dy, ax, ay, bx, by) -> Optional[float]:
     tmin, tmax = -math.inf, math.inf
