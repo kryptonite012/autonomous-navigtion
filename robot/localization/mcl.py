@@ -141,11 +141,7 @@ class ParticleFilter:
             c, s_ = math.cos(h), math.sin(h)
             dx = c * ox - s_ * oy + dist * np.cos(h + ang)
             dy = s_ * ox + c * oy + dist * np.sin(h + ang)
-            cx = np.floor((px[:, None] + dx - g.origin[0]) / g.resolution).astype(np.int64)
-            cy = np.floor((py[:, None] + dy - g.origin[1]) / g.resolution).astype(np.int64)
-            inside = (cx >= 0) & (cx < g.width) & (cy >= 0) & (cy < g.height)
-            d = np.full(cx.shape, 1.0, np.float32)
-            d[inside] = self.dist_field[cy[inside], cx[inside]]
+            d = g.sample_field(self.dist_field, px[:, None] + dx, py[:, None] + dy)
             score = np.log(self.z_hit * np.exp(-0.5 * (d / self.sigma_hit) ** 2) + self.z_rand).sum(axis=1)
             k = min(top_k, len(score))
             idx = np.argpartition(-score, k - 1)[:k]
@@ -211,12 +207,7 @@ class ParticleFilter:
         sy = p[:, 1:2] + s * ox + c * oy
         ex = sx + dist * np.cos(p[:, 2:3] + ang)
         ey = sy + dist * np.sin(p[:, 2:3] + ang)
-        g = self.grid
-        cx = np.floor((ex - g.origin[0]) / g.resolution).astype(np.int64)
-        cy = np.floor((ey - g.origin[1]) / g.resolution).astype(np.int64)
-        inside = (cx >= 0) & (cx < g.width) & (cy >= 0) & (cy < g.height)
-        d = np.full(cx.shape, 1.0, np.float32)
-        d[inside] = self.dist_field[cy[inside], cx[inside]]
+        d = self.grid.sample_field(self.dist_field, ex, ey)
         prob = self.z_hit * np.exp(-0.5 * (d / self.sigma_hit) ** 2) + self.z_rand
         log_w = np.log(prob).sum(axis=1)
         # mean per-beam likelihood, used to detect kidnapping
