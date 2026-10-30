@@ -22,6 +22,7 @@ from robot.mapping.mapper import Mapper
 from robot.motors.kinematics import DiffDriveKinematics
 from robot.navigation.missions import Mission, MissionRunner
 from robot.navigation.navigator import NavState, Navigator
+from robot.recorder import Recorder
 from robot.safety.controller import SafetyConfig, SafetyController
 from robot.sorting.arm import SortingArm
 from robot.sorting.sorter import Sorter
@@ -107,6 +108,12 @@ class Robot:
         self._teleop_time = 0.0
         self._last_scan = None
         self._returning_low_battery = False
+        self.recorder = Recorder(cfg.get("recording", {}).get("dir", "data/recordings"),
+                                 cfg.get("recording", {}).get("max_minutes", 30) * 60)
+        self.events.subscribe(lambda ev: self.recorder.event(ev.type, ev.severity, ev.description)
+                              if self.recorder.active else None)
+        self._last_ticks = None
+        self._last_gyro = None
 
     # ----------------------------------------------------------------- events
     def _event(self, type_: str, severity: str, description: str) -> None:
@@ -136,6 +143,7 @@ class Robot:
             self._event("hardware_missing", "warning", f"{h.name}: {h.message}")
 
     def shutdown(self) -> None:
+        self.recorder.stop()
         self.sorter.stop()
         self.navigator.cancel("shutdown")
         self.safety.stop("shutdown")
@@ -184,6 +192,7 @@ class Robot:
         if self.hw.encoders:
             try:
                 ticks = self.hw.encoders.ticks()
+                self._last_ticks = ticks
                 with self._lock:
                     self.odom.update(ticks, now, gyro_z)
                     self.pose_time = now
@@ -224,6 +233,10 @@ class Robot:
             self.mapper.update(pose, ranges, scan)
 
         # --- navigation
+        if scan is not None and pose is not None and self.navigator.active:
+            pts = ScanMatcher.scan_points(scan.angle_min, scan.angle_increment, scan.ranges, 2.0, 120)
+            c, sn = math.cos(pose[2]), math.sin(pose[2])
+            self.navigator.set_scan_points([(pose[0] + c * x - sn * y, pose[1] + sn * x + c * y) for x, y in pts])
         if self.navigator.active:
             twist = self.navigator.step(pose, self.pose_time, ranges)
             if twist is None:
@@ -253,6 +266,8 @@ class Robot:
                 self._event("cpu_hot", "warning", f"CPU temperature {t:.1f} C")
         if not self.telemetry_history or now - self.telemetry_history[-1]["timestamp"] >= 0.5:
             self.telemetry_history.append(self.telemetry())
+        if self.recorder.active:
+            self._record_step(now, gyro_z, ranges, scan, pose)
 
     def _pose_if_valid(self) -> Optional[tuple[float, float, float]]:
         """Pose in the map frame, or None if it cannot be trusted."""
@@ -262,6 +277,35 @@ class Robot:
             if not self.localizer.pose_ok():
                 return None
             return self.localizer.map_pose(self.odom.pose.as_tuple())
+
+    def _record_step(self, now, gyro_z, ranges, scan, pose) -> None:
+        rec = {"type": "step", "t": round(now, 4), "ticks": self._last_ticks,
+               "gyro": None if gyro_z is None else round(gyro_z, 5),
+               "ranges": [[r.sensor, None if r.distance_m is None else round(r.distance_m, 4),
+                           round(r.angle_rad, 4), r.valid] for r in ranges],
+               "odom": [round(v, 4) for v in self.odom.pose.as_tuple()],
+               "pose": None if pose is None else [round(v, 4) for v in pose],
+               "cmd": list(self.safety.status.applied), "mode": self.mode.value,
+               "battery": self.battery_v}
+        if scan is not None:
+            rec["scan"] = {"amin": scan.angle_min, "ainc": scan.angle_increment, "rmax": scan.range_max,
+                           "r": [None if not math.isfinite(float(v)) else round(float(v), 3) for v in scan.ranges]}
+        if self.simulated:
+            rec["gt"] = [round(v, 4) for v in self.hw.world.true_pose()]
+        self.recorder.log(rec)
+
+    def start_recording(self, name: str) -> str:
+        ch = self.cfg["chassis"]
+        meta = {"robot": self.cfg["robot"]["name"], "hardware_mode": self.hw.mode,
+                "chassis": ch, "mapping": self.cfg["mapping"], "localization": self.cfg.get("localization", {}),
+                "sensors": [{"name": s.name, "angle_rad": s.angle_rad, "max_range_m": s.max_range_m}
+                            for s in self.hw.ranges],
+                "imu": self.hw.imu is not None, "lidar": self.hw.lidar is not None,
+                "map": self.mapper.loaded_name}
+        try:
+            return str(self.recorder.start(name, meta))
+        except (RuntimeError, FileExistsError, ValueError) as exc:
+            raise CommandRejected(str(exc)) from exc
 
     def _scan_match(self, pose: tuple[float, float, float], scan) -> tuple[float, float, float]:
         odom = self.odom.pose.as_tuple()
@@ -543,6 +587,7 @@ class Robot:
             "localization": self.localizer.status(),
             "mission": self.missions.status(),
             "objects_mapped": len(self.objects.list()),
+            "recording": self.recorder.status(),
             "capabilities": self.caps,
         }
 

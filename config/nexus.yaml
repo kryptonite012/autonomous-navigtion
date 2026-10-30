@@ -220,6 +220,10 @@ simulation:
   pickup_failure_rate: 0.1
   seed: 7
 
+recording:
+  dir: data/recordings
+  max_minutes: 30            # a recording stops by itself after this
+
 server:
   cors_origins: ["http://localhost:5173"]
   rate_limit_per_minute: 240
