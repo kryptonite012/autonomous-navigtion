@@ -10,11 +10,13 @@ from fastapi.responses import Response, StreamingResponse
 from sqlalchemy import func, select
 
 from backend.api.deps import AppContainer, CurrentUser, audit, container, operator, viewer
-from backend.api.schemas import CalibrationRequest, ServoCalibration, SortingConfig, VisionSettings
+from backend.api.schemas import (CalibrationRequest, ServoCalibration, SortingConfig, VisionSettings,
+                                 WhiteBalanceRequest)
 from backend.database.models import SortingRecord
 from robot.config import save_section
 from robot.runtime import CommandRejected
 from robot.vision.calibration import suggest_range, validate_range
+from robot.vision.detector import ColorDetector
 
 vision = APIRouter(prefix="/api/vision", tags=["vision"])
 sorting = APIRouter(prefix="/api/sorting", tags=["sorting"])
@@ -26,6 +28,7 @@ def vision_status(_: CurrentUser = Depends(viewer), c: AppContainer = Depends(co
     s = c.robot.vision.status()
     s["colors"] = c.robot.vision.params.colors_as_config()
     s["enabled_colors"] = c.robot.vision.params.enabled_colors
+    s["white_balance"] = {"mode": c.robot.vision.params.white_balance, "gains": list(c.robot.vision.params.wb_gains)}
     s["settings"] = {"min_area_px": c.robot.vision.params.min_area_px,
                      "min_confidence": c.robot.vision.params.min_confidence,
                      "blur_kernel": c.robot.vision.params.blur_kernel,
@@ -84,6 +87,33 @@ def vision_calibrate(body: CalibrationRequest, request: Request, _: CurrentUser 
     audit(c, request, "vision_calibrate", f"{body.color}: {[(r.lower, r.upper) for r in ranges]}")
     return {"ok": True, "color": body.color,
             "ranges": [{"lower": list(r.lower), "upper": list(r.upper)} for r in ranges]}
+
+
+@vision.post("/white-balance")
+def vision_white_balance(body: WhiteBalanceRequest, request: Request, _: CurrentUser = Depends(operator),
+                         c: AppContainer = Depends(container)):
+    """Correct coloured lighting. 'reference': hold a white or light grey sheet
+    in the ROI; gains making it neutral are stored. Recalibrate HSV ranges
+    afterwards if they were tuned without white balance."""
+    p = c.robot.vision.params
+    if body.mode == "reference":
+        if body.roi is None:
+            raise HTTPException(422, "roi required for reference white balance")
+        frame = c.robot.vision.frame_copy()
+        if frame is None:
+            raise HTTPException(409, "no camera frame available")
+        try:
+            p.wb_gains = ColorDetector.reference_gains(frame, tuple(body.roi))
+        except ValueError as exc:
+            raise HTTPException(422, str(exc))
+    p.white_balance = body.mode
+    if body.persist:
+        vc = dict(c.robot.cfg["vision"])
+        vc["white_balance"] = p.white_balance
+        vc["wb_gains"] = list(p.wb_gains)
+        save_section(c.config_path, "vision", vc)
+    audit(c, request, "vision_white_balance", f"{body.mode} gains={p.wb_gains}")
+    return {"ok": True, "mode": p.white_balance, "gains": list(p.wb_gains)}
 
 
 @vision.put("/settings")

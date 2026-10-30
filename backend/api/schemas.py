@@ -189,3 +189,10 @@ class SimTeleport(BaseModel):
     x: float = Field(ge=-50, le=50)
     y: float = Field(ge=-50, le=50)
     theta: float = Field(default=0.0, ge=-math.pi * 2, le=math.pi * 2)
+
+
+class WhiteBalanceRequest(BaseModel):
+    mode: str = Field(default="reference", pattern=r"^(off|gray_world|reference)$")
+    roi: Optional[list[int]] = Field(default=None, min_length=4, max_length=4,
+                                     description="x, y, w, h of a white/grey sheet (mode=reference)")
+    persist: bool = False

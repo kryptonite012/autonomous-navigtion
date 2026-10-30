@@ -110,6 +110,11 @@ vision:
   min_solidity: 0.6
   min_confidence: 0.45
   min_contrast: 20.0
+  # off | gray_world | reference. "reference" uses wb_gains measured from a
+  # white sheet (dashboard: Object Detection -> White balance). gray_world
+  # needs no calibration but shifts colours on tinted floors.
+  white_balance: "off"
+  wb_gains: [1.0, 1.0, 1.0]
   track_max_distance_px: 60
   track_max_missed: 8
   colors:
@@ -147,6 +152,16 @@ navigation:
   inflation_radius_m: 0.18
   replan_interval_s: 1.0
   planner: astar           # astar | dijkstra
+  controller: dwa          # dwa | pure_pursuit
+  dwa_lookahead_m: 0.5
+  dwa:
+    horizon_s: 1.6
+    v_samples: 7
+    w_samples: 17
+    safety_margin: 0.03
+    w_goal: 1.0
+    w_clear: 0.5
+    w_speed: 0.25
   allow_unknown: false
   stuck_timeout_s: 6.0
   max_recoveries: 3

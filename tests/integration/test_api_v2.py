@@ -116,3 +116,13 @@ def test_metrics(client):
     assert 'nexus_up{mode="simulation"} 1.0' in text
     assert "nexus_control_loop_hz" in text and "nexus_estop_active 0.0" in text
     assert "# TYPE nexus_sort_operations_total counter" in text
+
+
+def test_white_balance_endpoint(client):
+    time.sleep(0.3)
+    r = client.post("/api/vision/white-balance", json={"mode": "reference", "roi": [0, 0, 640, 100]})
+    assert r.status_code == 200, r.text        # top of the simulated view is the light wall
+    assert len(r.json()["gains"]) == 3
+    assert client.post("/api/vision/white-balance", json={"mode": "reference"}).status_code == 422
+    assert client.post("/api/vision/white-balance", json={"mode": "off"}).json()["mode"] == "off"
+    assert client.get("/api/vision/status").json()["white_balance"]["mode"] == "off"
