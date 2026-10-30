@@ -47,7 +47,8 @@ export default function Overview() {
           <div className="kv"><span>Y</span><span>{fmt(pose?.y)} m</span></div>
           <div className="kv"><span>Heading</span><span>{pose ? fmt((pose.theta * 180) / Math.PI, 1) : "—"}°</span></div>
           <div className="kv"><span>Pose source</span><span>{pose?.source ?? "—"}</span></div>
-          <div className="kv"><span>Pose valid</span><span>{pose ? (pose.valid ? "yes" : "NO") : "—"}</span></div>
+          <div className="kv"><span>Pose valid / σ</span><span>{pose ? (pose.valid ? "yes" : "NO") : "—"} / {fmt(pose?.std_xy, 3)} m</span></div>
+          <div className="kv"><span>Mission</span><span>{state?.mission.mission ? `${state.mission.mission} (${state.mission.state})` : "—"}</span></div>
           <div className="kv"><span>Navigation</span><span>{state?.navigation.state ?? "—"}</span></div>
           <div className="kv"><span>Distance to goal</span><span>{fmt(state?.navigation.distance_remaining)} m</span></div>
           <div className="kv"><span>Front obstacle</span><span>{fmt(safety?.obstacle_front_m)} m</span></div>
@@ -61,6 +62,7 @@ export default function Overview() {
           <div className="kv"><span>Sorted (verified)</span><span>{sort?.statistics.success ?? 0}</span></div>
           <div className="kv"><span>Unverified / failed</span><span>{(sort?.statistics.unverified ?? 0)} / {(sort?.statistics.failed_pickup ?? 0) + (sort?.statistics.failed_verification ?? 0)}</span></div>
           <div className="kv"><span>Verification method</span><span>{sort?.verification ?? "—"}</span></div>
+          <div className="kv"><span>Objects on the map</span><span>{state?.objects_mapped ?? 0}</span></div>
         </Card>
       </div>
 

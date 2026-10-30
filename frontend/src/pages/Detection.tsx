@@ -5,6 +5,7 @@ import { useApiAction, usePoll } from "../hooks/useApiAction";
 import { useAuth } from "../hooks/useAuth";
 import { useRobot } from "../hooks/useRobot";
 import { api } from "../services/api";
+import type { MappedObject } from "../services/types";
 
 interface VisionFull {
   colors: Record<string, { lower: number[]; upper: number[] }[]>;
@@ -21,6 +22,7 @@ export default function Detection() {
   const { can } = useAuth();
   const { run, busy } = useApiAction();
   const { data, refresh } = usePoll<VisionFull>("/api/vision/status", 0);
+  const { data: omap, refresh: refreshObjects } = usePoll<{ calibrated: boolean; objects: MappedObject[] }>("/api/vision/objects", 2000);
   const [color, setColor] = useState("red");
   const [ranges, setRanges] = useState<{ lower: number[]; upper: number[] }[]>([]);
   const [roi, setRoi] = useState("270,190,100,100");
@@ -107,6 +109,29 @@ export default function Detection() {
           )}
         </div>
       </div>
+
+      <Card title="Objects on the map" actions={<button className="btn-ghost" disabled={!op || busy}
+            onClick={() => run(() => api.del("/api/vision/objects"), "Object map cleared").then(refreshObjects)}>Clear</button>}>
+        {!omap?.calibrated ? (
+          <div className="text-sm text-slate-500">Objects are only placed on the map once the camera is calibrated (scripts/calibrate_camera.py), because a single uncalibrated camera gives no distance.</div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead><tr className="table-head"><th>ID</th><th>Colour</th><th>Position (m)</th><th>Sightings</th><th>Last seen</th><th>Status</th></tr></thead>
+            <tbody>
+              {omap.objects.map((o) => (
+                <tr key={o.id} className="border-t border-ink-800">
+                  <td className="font-mono">{o.id}</td>
+                  <td><span className="inline-block h-2 w-2 rounded-full mr-1.5" style={{ background: COLOR_HEX[o.color] }} />{o.color}</td>
+                  <td className="font-mono">({fmt(o.x)}, {fmt(o.y)})</td>
+                  <td className="font-mono">{o.observations}</td>
+                  <td className="font-mono">{fmtTime(o.last_seen)}</td>
+                  <td>{o.sorted ? "picked" : "on floor"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Card>
 
       <Card title="HSV calibration">
         <div className="flex flex-wrap items-end gap-4 mb-4">
