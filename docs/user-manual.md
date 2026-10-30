@@ -28,7 +28,8 @@ current mode, obstacle zone, battery, message lag and the E-STOP.
 | Overview | check health at a glance: battery, CPU, pose, navigation, detections, sorted count, sensor health, e-stop |
 | Live Camera | see the raw, annotated and mask feeds; start/stop the vision pipeline |
 | Mapping | explore autonomously or map while driving; save/load/reset the map |
-| Navigation | click on the map to send the robot somewhere; named locations; pause/resume/stop; manual drive pad |
+| Navigation | click on the map to send the robot somewhere; named locations; pause/resume/stop; localisation status, set initial pose, global localisation; manual drive pad |
+| Missions | build waypoint missions and patrol loops on the map; start/stop; live progress |
 | Object Detection | detection table; enable colours; tune filters; calibrate HSV thresholds |
 | Color Sorting | start/pause/stop sorting; colour→bin mapping; bin fill levels; history; servo calibration |
 | Telemetry | live charts of velocity, distances, battery, CPU; IMU; commanded vs applied velocity |
@@ -37,6 +38,7 @@ current mode, obstacle zone, battery, message lag and the E-STOP.
 | Map Management | load, rename, delete, download (PGM/YAML) saved maps |
 | Event Logs | system events (filter, search, CSV export); admin: audit log |
 | Settings | system info, backups, restart/power off, safety limits, users, password |
+| Simulation | *(simulation mode only)* inject faults, kidnap the robot, place obstacles, scatter objects, save a ground-truth map, compare estimate with truth |
 
 ## Manual driving
 
@@ -69,6 +71,36 @@ time. With a LiDAR, use the ROS 2 stack (SLAM Toolbox) for metric maps.
    up to 3 recoveries (back off, rotate) and then reports **failed** with
    the reason. It holds position if its pose becomes invalid.
 
+## Localisation
+
+The header pose comes from the odometry EKF (encoders + gyro). It drifts by
+a few centimetres per metre. With a **LiDAR** and a loaded map, the
+particle filter corrects it continuously. The map shows a violet particle
+cloud, and the cyan ring around the robot is the 2σ uncertainty. See
+[localization.md](localization.md).
+
+* After loading a map, or after carrying the robot somewhere: *Navigation →
+  Set pose on map*, enter the heading, then click where the robot stands.
+* LiDAR only: **Global** finds the robot anywhere on the map. Let it spin
+  or drive a little until the status says *localised*. Until then navigation
+  is refused, because the pose is not trusted.
+
+## Missions
+
+1. Load a map and check the robot is localised.
+2. *Missions*: name the mission, then click waypoints on the map (or add
+   named locations). Set a dwell time per waypoint if wanted.
+3. Options: **Loop** (patrol, optionally a maximum number of loops),
+   **Return home at end**, and what to do if a waypoint is unreachable
+   (**skip** it or **abort** the mission).
+4. **Save**, then **Start**. Progress and skipped waypoints are shown under
+   the map. Missions are stored in the database and survive restarts.
+
+If the battery drops below `navigation.return_voltage` (default 7.0 V)
+during a mission, sorting run, exploration or navigation, the task is aborted
+and the robot drives to the `dock` location. Below 6.6 V all motion is
+refused.
+
 ## Sorting
 
 1. Put the bins in place and empty them; click **Bins emptied**.
@@ -84,6 +116,27 @@ time. With a LiDAR, use the ROS 2 stack (SLAM Toolbox) for metric maps.
 
 Sorting stops by itself when no objects are found after 6 search cycles or
 all bins are full.
+
+With a calibrated camera, every object the robot has seen is placed on the
+map (*Object Detection → Objects on the map*). When nothing is in view, the
+sorter drives towards the nearest remembered object instead of searching
+blindly.
+
+## Simulation control (simulation mode only)
+
+The *Simulation* screen is a test bench:
+
+* **Fault injection**: motor driver, encoders, servo controller, covered
+  camera, the physical e-stop, individual range sensors, battery voltage.
+  Use it to check that each fault is reported and handled safely before
+  testing on hardware.
+* **Kidnap robot**: moves the robot without telling its odometry. Compare
+  the estimate (cyan) with the true pose (green dashed) and practise
+  re-localisation.
+* **Obstacles**: static or moving, placed with a click.
+* **Scenario**: scatter test objects, save a ground-truth map of the room
+  (lets you test navigation and missions without exploring first), reset
+  everything.
 
 ## Shutting down
 
