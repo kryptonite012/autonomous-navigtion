@@ -180,3 +180,31 @@ def test_lidar_scan_matching_reduces_mapping_drift(tmp_path):
     assert coll == 0
     assert err_on < 0.08 and err_on < err_off
     assert prec_on > 0.6 and prec_on > prec_off
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("controller", ["dwa", "pure_pursuit"])
+@pytest.mark.parametrize("moving", [False, True])
+def test_unmapped_obstacles(tmp_path, controller, moving):
+    cfg = load_config(overrides={"robot": {"mode": "simulation"}, "navigation": {"controller": controller},
+                                 "mapping": {"maps_dir": str(tmp_path / "maps")}})
+    r = Robot(cfg)
+    r.start()
+    time.sleep(0.3)
+    try:
+        g = OccupancyGrid.from_config(cfg["mapping"])
+        r.hw.world.reference_grid(g)
+        r.mapper.store.save(g, "truth")
+        r.load_map("truth")
+        r.hw.world.teleport(-1.6, -0.3, 0.0)
+        r.reset_pose(-1.6, -0.3, 0.0)
+        if moving:
+            r.hw.world.add_dynamic_obstacle(-0.3, -1.2, 0.1, 0.0, 0.12)   # crosses the path
+        else:
+            r.hw.world.add_dynamic_obstacle(-0.2, -0.3, 0.12)             # box on the path, not in the map
+        r.navigate_to(1.2, -0.3)
+        assert wait(lambda: r.navigator.state.value in ("reached", "failed"), 60)
+        assert r.navigator.state.value == "reached", r.navigator.message
+        assert r.hw.world.state.collisions == 0
+    finally:
+        r.shutdown()
