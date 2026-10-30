@@ -1528,6 +1528,46 @@
     }
    }
   },
+  "/api/vision/white-balance": {
+   "post": {
+    "tags": [
+     "vision"
+    ],
+    "summary": "Vision White Balance",
+    "description": "Correct coloured lighting. 'reference': hold a white or light grey sheet\nin the ROI; gains making it neutral are stored. Recalibrate HSV ranges\nafterwards if they were tuned without white balance.",
+    "operationId": "vision_white_balance_api_vision_white_balance_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/WhiteBalanceRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/vision/settings": {
    "put": {
     "tags": [
@@ -2049,6 +2089,46 @@
     }
    }
   },
+  "/api/missions/coverage": {
+   "post": {
+    "tags": [
+     "missions"
+    ],
+    "summary": "Mission Coverage",
+    "description": "Generate a lawnmower sweep over the free space of the current map.",
+    "operationId": "mission_coverage_api_missions_coverage_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CoverageRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/missions/{name}": {
    "put": {
     "tags": [
@@ -2226,6 +2306,113 @@
       "content": {
        "application/json": {
         "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/schedules": {
+   "get": {
+    "tags": [
+     "missions"
+    ],
+    "summary": "Schedule List",
+    "operationId": "schedule_list_api_schedules_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/schedules/{name}": {
+   "put": {
+    "tags": [
+     "missions"
+    ],
+    "summary": "Schedule Save",
+    "operationId": "schedule_save_api_schedules__name__put",
+    "parameters": [
+     {
+      "name": "name",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Name"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ScheduleIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "missions"
+    ],
+    "summary": "Schedule Delete",
+    "operationId": "schedule_delete_api_schedules__name__delete",
+    "parameters": [
+     {
+      "name": "name",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Name"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
        }
       }
      }
@@ -2484,6 +2671,163 @@
     }
    }
   },
+  "/api/recordings": {
+   "get": {
+    "tags": [
+     "recordings"
+    ],
+    "summary": "Recordings List",
+    "operationId": "recordings_list_api_recordings_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/recordings/start": {
+   "post": {
+    "tags": [
+     "recordings"
+    ],
+    "summary": "Recording Start",
+    "operationId": "recording_start_api_recordings_start_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RecordingName"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/recordings/stop": {
+   "post": {
+    "tags": [
+     "recordings"
+    ],
+    "summary": "Recording Stop",
+    "operationId": "recording_stop_api_recordings_stop_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/recordings/{name}/download": {
+   "get": {
+    "tags": [
+     "recordings"
+    ],
+    "summary": "Recording Download",
+    "operationId": "recording_download_api_recordings__name__download_get",
+    "parameters": [
+     {
+      "name": "name",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Name"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/recordings/{name}": {
+   "delete": {
+    "tags": [
+     "recordings"
+    ],
+    "summary": "Recording Delete",
+    "operationId": "recording_delete_api_recordings__name__delete",
+    "parameters": [
+     {
+      "name": "name",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Name"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/ping": {
    "get": {
     "summary": "Ping",
@@ -2553,6 +2897,45 @@
      "color"
     ],
     "title": "CalibrationRequest"
+   },
+   "CoverageRequest": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Name"
+     },
+     "spacing": {
+      "type": "number",
+      "maximum": 3.0,
+      "minimum": 0.1,
+      "title": "Spacing",
+      "default": 0.5
+     },
+     "loop": {
+      "type": "boolean",
+      "title": "Loop",
+      "default": false
+     },
+     "return_home": {
+      "type": "boolean",
+      "title": "Return Home",
+      "default": true
+     },
+     "dwell_s": {
+      "type": "number",
+      "maximum": 60.0,
+      "minimum": 0.0,
+      "title": "Dwell S",
+      "default": 0.0
+     }
+    },
+    "type": "object",
+    "required": [
+     "name"
+    ],
+    "title": "CoverageRequest"
    },
    "FaultClear": {
     "properties": {
@@ -2900,6 +3283,22 @@
     "type": "object",
     "title": "PoseReset"
    },
+   "RecordingName": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "maxLength": 64,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_\\-]*$",
+      "title": "Name"
+     }
+    },
+    "type": "object",
+    "required": [
+     "name"
+    ],
+    "title": "RecordingName"
+   },
    "SafetySettings": {
     "properties": {
      "emergency_stop_distance_m": {
@@ -2970,6 +3369,41 @@
     },
     "type": "object",
     "title": "SafetySettings"
+   },
+   "ScheduleIn": {
+    "properties": {
+     "mission": {
+      "type": "string",
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Mission"
+     },
+     "time": {
+      "type": "string",
+      "pattern": "^([01]\\d|2[0-3]):([0-5]\\d)$",
+      "title": "Time"
+     },
+     "days": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "maxItems": 7,
+      "minItems": 1,
+      "title": "Days"
+     },
+     "enabled": {
+      "type": "boolean",
+      "title": "Enabled",
+      "default": true
+     }
+    },
+    "type": "object",
+    "required": [
+     "mission",
+     "time"
+    ],
+    "title": "ScheduleIn"
    },
    "ServoCalibration": {
     "properties": {
@@ -3520,6 +3954,40 @@
     },
     "type": "object",
     "title": "WaypointIn"
+   },
+   "WhiteBalanceRequest": {
+    "properties": {
+     "mode": {
+      "type": "string",
+      "pattern": "^(off|gray_world|reference)$",
+      "title": "Mode",
+      "default": "reference"
+     },
+     "roi": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "integer"
+        },
+        "type": "array",
+        "maxItems": 4,
+        "minItems": 4
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Roi",
+      "description": "x, y, w, h of a white/grey sheet (mode=reference)"
+     },
+     "persist": {
+      "type": "boolean",
+      "title": "Persist",
+      "default": false
+     }
+    },
+    "type": "object",
+    "title": "WhiteBalanceRequest"
    }
   }
  }
