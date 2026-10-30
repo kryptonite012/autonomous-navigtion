@@ -50,7 +50,8 @@ class SimState:
     vr: float = 0.0
     left_dist: float = 0.0   # accumulated wheel travel
     right_dist: float = 0.0
-    collisions: int = 0
+    collisions: int = 0      # steps where the robot drove into something
+    contacts: int = 0        # steps where something (a moving obstacle) touched the robot
 
 
 class SimWorld:
@@ -123,7 +124,10 @@ class SimWorld:
             nx = s.x + v * math.cos(s.theta + w * dt / 2) * dt
             ny = s.y + v * math.sin(s.theta + w * dt / 2) * dt
             if self._collides(nx, ny):
-                s.collisions += 1
+                if self._collides(s.x, s.y):
+                    s.contacts += 1          # already touching: hit by a moving obstacle
+                elif abs(v) > 1e-3:
+                    s.collisions += 1        # the robot moved into an obstacle
                 # wheels spin but the chassis is blocked: odometry drifts, as on a real robot
                 s.left_dist += s.vl * dt
                 s.right_dist += s.vr * dt
@@ -135,9 +139,17 @@ class SimWorld:
                 s.left_dist += s.vl * dt
                 s.right_dist += s.vr * dt
             for d in self.dynamic:
-                d[0] += d[3] * dt
-                d[1] += d[4] * dt
+                px, py = d[0] + d[3] * dt, d[1] + d[4] * dt
                 x0, y0, x1, y1 = self.bounds
+                hit_robot = math.hypot(px - s.x, py - s.y) < d[2] + self.robot_radius
+                hit_static = any(math.hypot(px - min(max(px, ax), bx), py - min(max(py, ay), by)) < d[2]
+                                 for (ax, ay, bx, by) in self.rects) or \
+                    any(math.hypot(px - cx, py - cy) < d[2] + cr for (cx, cy, cr) in self.circles)
+                if hit_robot or hit_static:
+                    # bounce back (like a ball) instead of passing through
+                    d[3], d[4] = -d[3], -d[4]
+                    continue
+                d[0], d[1] = px, py
                 if not (x0 + d[2] < d[0] < x1 - d[2]):
                     d[3] = -d[3]
                 if not (y0 + d[2] < d[1] < y1 - d[2]):
@@ -291,6 +303,7 @@ class SimWorld:
                 "objects": [{"id": o.id, "color": o.color, "x": round(o.x, 3), "y": round(o.y, 3),
                              "held": o.held, "sorted_bin": o.sorted_bin} for o in self.objects],
                 "collisions": s.collisions,
+                "contacts": s.contacts,
                 "battery_v": round(self.battery_v, 3),
                 "faults": {"motor_fault": self.motor_fault, "encoder_fault": self.encoder_fault,
                            "estop_pressed": self.estop_pressed},
