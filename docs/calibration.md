@@ -69,6 +69,16 @@ Tips: matte objects work far better than glossy ones; avoid colours close to
 the floor colour (the detector rejects blobs that do not contrast with their
 surroundings, so a blue object on a blue floor cannot be detected).
 
+### White balance (coloured lighting)
+
+Do this before the HSV calibration if the room light is noticeably warm,
+cool or coloured: *Object Detection → White balance*, put a white or light
+grey sheet in the sample region, then **Measure from white sheet** (or
+`POST /api/vision/white-balance {"mode": "reference", "roi": [x, y, w, h], "persist": true}`).
+The per-channel gains are stored in `vision.wb_gains`. In the synthetic
+benchmark this restored 97–98 % accuracy under warm, cool and green casts,
+where accuracy without it dropped to 63–80 %.
+
 ## 6. Servos and sorting poses
 
 1. *Color Sorting → Servo calibration*: move each joint to find

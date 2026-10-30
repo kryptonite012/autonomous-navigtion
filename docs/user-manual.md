@@ -96,6 +96,17 @@ cloud, and the cyan ring around the robot is the 2σ uncertainty. See
 4. **Save**, then **Start**. Progress and skipped waypoints are shown under
    the map. Missions are stored in the database and survive restarts.
 
+**Coverage mission**: generates a lawnmower sweep of the whole known floor
+(choose the row spacing). Useful for patrols and for finding every object
+before sorting.
+
+**Schedules**: run a mission at a set time on chosen weekdays, for example
+a weekday 21:00 patrol. If the robot is busy or not ready at that time, the
+run is skipped and logged.
+
+The local planner (DWA, green line on the map) steers around obstacles that
+are not on the map. See [navigation.md](navigation.md).
+
 If the battery drops below `navigation.return_voltage` (default 7.0 V)
 during a mission, sorting run, exploration or navigation, the task is aborted
 and the robot drives to the `dock` location. Below 6.6 V all motion is
@@ -121,6 +132,35 @@ With a calibrated camera, every object the robot has seen is placed on the
 map (*Object Detection → Objects on the map*). When nothing is in view, the
 sorter drives towards the nearest remembered object instead of searching
 blindly.
+
+## Flight recorder
+
+*Event Logs → Flight recorder*: **Start recording** logs every control cycle
+(encoder ticks, gyro, range sensors, LiDAR scans, commands, pose estimates;
+ground truth in simulation) to a compressed file. The header shows ● REC
+while it runs. **Download** the file and replay it on a laptop:
+
+```bash
+python3 scripts/replay.py run_202611011530.jsonl.gz
+python3 scripts/replay.py run.jsonl.gz --no-scan-matching --map-out test_map
+```
+
+Replay rebuilds odometry, the map and scan matching with the parameters you
+choose and prints the trajectory error. Use it to tune the robot without
+re-running it.
+
+## Coloured lighting
+
+If colours are misdetected under warm or coloured light: *Object Detection
+→ White balance*. Hold a white sheet in the sample region and click
+**Measure from white sheet**. **Gray world** needs no sheet but works
+poorly on tinted floors. Check the HSV thresholds afterwards. Detections
+now also report a shape (circle, square, rectangle, triangle).
+
+## On a phone
+
+The dashboard works on phones: the menu opens from ☰ and the E-STOP stays
+in the header on every screen.
 
 ## Simulation control (simulation mode only)
 

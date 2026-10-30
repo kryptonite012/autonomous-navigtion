@@ -51,6 +51,10 @@ missing device has a reason.
 | Estimate jumps after bumping furniture | wheel slip against an obstacle | expected with blind spots (see localization.md); re-localise |
 | Mission skips every waypoint | waypoints inside inflated obstacles or unknown space | place waypoints in free (white) map area, at least 20 cm from walls |
 | Robot heads for the dock in the middle of a task | battery below `navigation.return_voltage` | charge; tune the voltage in the config |
+| Robot stops in front of an unmapped obstacle and recovers slowly | DWA found no collision-free arc (narrow gap) | expected; it backs off and replans; reduce `navigation.dwa.check_distance` slightly for tight rooms |
+| Coverage mission rejected: too many waypoints | room too large for the row spacing | increase spacing (limit 100 waypoints) |
+| Scheduled patrol did not run | robot busy, e-stopped, not localised, or > 10 min late | see the `schedule_skipped` event in Event Logs |
+| Map walls look doubled while mapping with LiDAR | scan matching off or rejecting matches | check `mapping.scan_matching: true` and the match score on the Mapping screen |
 
 ## Vision and sorting
 
@@ -64,6 +68,7 @@ missing device has a reason.
 | Only `unverified` results | no bin sensor configured | install the break-beam — results are never reported as success without it |
 | Low FPS on Pi | CPU throttling, high resolution | check cooling/temperature; use 640×480; disable colours you don't need |
 | No objects on the map | camera not calibrated | run `scripts/calibrate_camera.py` and set mount height/pitch (simulation is calibrated by construction) |
+| Colours wrong under warm/coloured light | colour cast | *Object Detection → White balance → Measure from white sheet*, then recheck HSV |
 
 ## Dashboard
 

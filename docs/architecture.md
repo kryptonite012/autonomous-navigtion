@@ -184,3 +184,14 @@ YAML (`nexus.experimental: true`).
 | Object map: detections placed in the world, sorter drives to known objects | `robot/vision/object_map.py`, *Object Detection* screen |
 | Simulation control room: fault injection, kidnapping, obstacles, scenario objects, ground-truth map | `backend/api/sim_routes.py`, *Simulation* screen (simulation mode only) |
 | Prometheus metrics | `GET /metrics` |
+
+## Added in v1.2
+
+| Feature | Where |
+|---|---|
+| LiDAR scan-to-map matching while mapping (SLAM without ROS) | `robot/mapping/scan_matcher.py`, `Robot._scan_match` |
+| Dynamic Window Approach local planner (default controller) | `robot/navigation/dwa.py` — see [navigation.md](navigation.md) |
+| Flight recorder + offline replay | `robot/recorder.py`, `scripts/replay.py`, `/api/recordings/*` |
+| Coverage (lawnmower) missions, mission schedules | `robot/navigation/coverage.py`, `robot/navigation/scheduler.py` |
+| Shape classification, gray-world and reference white balance | `robot/vision/detector.py`, `/api/vision/white-balance` |
+| Phone-friendly dashboard | `frontend/src/components/Layout.tsx` |
