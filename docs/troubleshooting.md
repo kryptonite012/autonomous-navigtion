@@ -29,7 +29,7 @@ missing device has a reason.
 | One wheel runs backwards | motor polarity | swap motor leads or set `invert_left/right` |
 | Robot curves when driving straight | wheel speed mismatch | calibrate `wheel_radius_m`; check tyre wear; the encoders correct pose but not motion |
 | Commands are limited | safety controller | *Telemetry → Limited by* says why (slow zone, timeout, side too close …) |
-| `battery_undervoltage` | pack below 6.6 V | charge; the fault clears only when the voltage is back above 6.8 V |
+| `battery_undervoltage` | pack below 6.6 V | charge or swap the pack, then clear the fault (refused while the voltage is still below 6.6 V) |
 
 ## Mapping and navigation
 
