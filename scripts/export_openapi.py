@@ -2,6 +2,8 @@
 """Write docs/openapi.json and the endpoint table in docs/api.md from the live app."""
 
 import json
+import os
+import secrets
 import sys
 from pathlib import Path
 
@@ -14,6 +16,9 @@ ROLE_HINT = {"viewer": "viewer", "operator": "operator", "admin": "admin"}
 
 
 def main() -> int:
+    # throwaway in-memory database: don't let the admin bootstrap write a
+    # password file over the real one in data/
+    os.environ["NEXUS_ADMIN_PASSWORD"] = secrets.token_urlsafe(16) + "Aa1!"
     app = create_app(db_url="sqlite://", secret="x" * 40, start_robot=False)
     spec = app.openapi()
     (ROOT / "docs" / "openapi.json").write_text(json.dumps(spec, indent=1))
