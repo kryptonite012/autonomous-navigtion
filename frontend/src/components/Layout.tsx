@@ -122,7 +122,10 @@ export default function Layout() {
           </div>
           {state && (
             <>
-              <Pill tone={state.simulated ? "info" : "ok"}>{state.simulated ? "SIM" : "HW"}<span className="hidden md:inline">{state.simulated ? "ULATION" : "ARDWARE"}</span></Pill>
+              <Pill tone={state.simulated ? "info" : "ok"}>
+                <span className="md:hidden">{state.simulated ? "SIM" : "HW"}</span>
+                <span className="hidden md:inline">{state.simulated ? "SIMULATION" : "HARDWARE"}</span>
+              </Pill>
               <span className="hidden sm:inline-flex"><Pill tone="muted">mode: {state.mode}</Pill></span>
               {s && !s.motion_allowed && <Pill tone="bad">MOTION DISABLED</Pill>}
               {s && s.zone !== "clear" && <Pill tone={s.zone === "stop" ? "bad" : "warn"}>obstacle {s.zone}</Pill>}
