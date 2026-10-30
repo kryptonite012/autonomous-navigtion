@@ -19,7 +19,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import func, select
 
-from backend.api import auth_routes, robot_routes, vision_routes
+from backend.api import auth_routes, autonomy_routes, metrics, robot_routes, sim_routes, vision_routes
 from backend.api.deps import AppContainer, resolve_token
 from backend.authentication.ratelimit import RateLimiter
 from backend.authentication.security import NetworkPolicy, TokenService, hash_password
@@ -135,7 +135,8 @@ def create_app(cfg: Optional[dict] = None, db_url: Optional[str] = None, secret:
             return JSONResponse({"detail": "client network not allowed"}, status_code=403)
         path = request.url.path
         # the stream and the e-stop are never rate limited
-        if path.startswith("/api/") and not path.endswith("stream.mjpg") and "emergency-stop" not in path:
+        if (path.startswith("/api/") or path == "/metrics") and not path.endswith("stream.mjpg") \
+                and "emergency-stop" not in path:
             if not c.limiter.allow(f"api:{host}"):
                 return JSONResponse({"detail": "rate limit exceeded"}, status_code=429)
         response = await call_next(request)
@@ -146,7 +147,8 @@ def create_app(cfg: Optional[dict] = None, db_url: Optional[str] = None, secret:
 
     for r in (auth_routes.router, auth_routes.users_router, robot_routes.system, robot_routes.robot_r,
               robot_routes.nav, robot_routes.mapping, robot_routes.sensors, robot_routes.logs,
-              vision_routes.vision, vision_routes.sorting):
+              vision_routes.vision, vision_routes.sorting, autonomy_routes.localization,
+              autonomy_routes.missions, autonomy_routes.objects, sim_routes.router, metrics.router):
         app.include_router(r)
 
     @app.get("/api/ping")

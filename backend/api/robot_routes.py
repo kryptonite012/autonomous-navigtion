@@ -278,6 +278,10 @@ def map_current(_: CurrentUser = Depends(viewer), c: AppContainer = Depends(cont
     snap["status"] = c.robot.mapper.status()
     snap["pose"] = c.robot.pose()
     snap["path"] = c.robot.navigator.status()["path"]
+    loc = c.robot.localizer.status(with_particles=True)
+    snap["particles"] = loc.get("particle_sample", [])
+    snap["objects"] = c.robot.objects.list()
+    snap["ground_truth"] = c.robot.ground_truth()
     return snap
 
 
