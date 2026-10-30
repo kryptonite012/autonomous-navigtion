@@ -76,7 +76,7 @@ Raspberry Pi 5 · OpenCV · FastAPI · React · ROS 2 (optional)
 
 | | |
 |---|---|
-| Tests | 86 passed, 7 HIL pending |
+| Tests | 89 passed, 7 HIL pending |
 | Detection | 84 FPS on x86 VM (Pi not yet measured) |
 | Synthetic accuracy | 98.6 %, 0 false positives |
 | Simulated sorting | 5/5 correct, verified |

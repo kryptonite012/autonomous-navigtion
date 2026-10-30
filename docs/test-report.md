@@ -9,14 +9,15 @@
 | Python / OpenCV | 3.13 / 5.0 |
 | Mode | simulation (no physical hardware attached) |
 | Command | `python3 -m pytest` |
-| Result | **86 passed, 7 skipped** (the 7 skipped are hardware-in-the-loop tests) in ~58 s |
+| Result | **89 passed, 7 skipped** (the 7 skipped are hardware-in-the-loop tests) in ~58 s |
 
 ## Coverage by area
 
-### Unit tests (`tests/unit`, 59 tests)
+### Unit tests (`tests/unit`, 62 tests)
 
 | Area | File | What is checked |
 |---|---|---|
+| Configuration | `test_config.py` | overrides, mode validation, persisted sections keep a backup |
 | Kinematics/odometry | `test_kinematics.py` | inverse/forward round-trip, saturation keeps curvature, straight line and in-place rotation odometry, angle wrap |
 | Occupancy grid | `test_occupancy_grid.py` | Bresenham, free/occupied/unknown marking, no-return rays, PGM/YAML round-trip, inflation |
 | Planners | `test_planners.py` | A* and Dijkstra around a wall, equal path cost, unreachable goal, goal in obstacle, no corner cutting, path simplification, nearest free cell |
