@@ -1,0 +1,14 @@
+image: sim_living_room.pgm
+mode: trinary
+resolution: 0.05
+origin:
+- -4.0
+- -4.0
+- 0.0
+negate: 0
+occupied_thresh: 0.65
+free_thresh: 0.25
+nexus:
+  experimental: true
+  source: range_sensors
+  saved_at: 1793393811.4540515
