@@ -57,8 +57,12 @@ class Sorter:
                  on_record: Optional[Callable[[SortRecord], None]] = None,
                  on_event: Optional[Callable[[str, str, str], None]] = None,
                  frame_size: tuple[int, int] = (640, 480),
-                 front_distance: Optional[Callable[[], Optional[float]]] = None):
+                 front_distance: Optional[Callable[[], Optional[float]]] = None,
+                 known_objects: Optional[Callable[[], list[tuple[str, float, float]]]] = None,
+                 on_picked: Optional[Callable[[str], None]] = None):
         self.sc = cfg["sorting"]
+        self.known_objects = known_objects or (lambda: [])
+        self.on_picked = on_picked or (lambda color: None)
         self.arm = arm
         self.bin_sensor = bin_sensor
         self.detections = detections
@@ -254,6 +258,15 @@ class Sorter:
         self.message = "moving to a new search position"
         target = self._open_heading[0] if self._open_heading else None
         self._open_heading = None
+        max_dist = 0.6
+        pose = self.pose()
+        mapped = self._nearest_mapped(pose)
+        if mapped is not None and pose is not None:
+            color, mx, my = mapped
+            # head for an object seen earlier (object map) instead of a blind move
+            target = math.atan2(my - pose[1], mx - pose[0])
+            max_dist = min(1.5, max(0.0, math.dist(pose[:2], (mx, my)) - 0.45))
+            self.message = f"heading to mapped {color} object at ({mx:.2f}, {my:.2f})"
         t_end = time.time() + 4.0
         while target is not None and time.time() < t_end and not self._stop.is_set():
             pose = self.pose()
@@ -268,7 +281,7 @@ class Sorter:
         t_end = time.time() + 6.0
         while time.time() < t_end and not self._stop.is_set():
             pose = self.pose()
-            if pose is None or start is None or math.dist(pose[:2], start[:2]) > 0.6:
+            if pose is None or start is None or math.dist(pose[:2], start[:2]) > max_dist:
                 break
             fd = self.front_distance()
             if fd is not None and fd < 0.35:
@@ -276,6 +289,18 @@ class Sorter:
             self.drive(0.15, 0.0)
             time.sleep(0.05)
         self.stop_drive()
+
+    def _nearest_mapped(self, pose) -> Optional[tuple[str, float, float]]:
+        if pose is None:
+            return None
+        best = None
+        for color, x, y in self.known_objects():
+            if self.bin_counts.get(self.bin_for(color), 0) >= self.capacity:
+                continue
+            d = math.dist(pose[:2], (x, y))
+            if d > 0.3 and (best is None or d < best[0]):
+                best = (d, (color, x, y))
+        return best[1] if best else None
 
     def _finish(self, reason: str) -> None:
         self.stop_drive()
@@ -339,6 +364,7 @@ class Sorter:
             self.arm.pick()
             self.state = SortState.VERIFYING_PICK
             if self._pick_confirmed(tgt):
+                self.on_picked(color)
                 break
             self.arm.release()
             self.arm.home()
