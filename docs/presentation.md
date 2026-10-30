@@ -95,6 +95,17 @@ Raspberry Pi 5 · OpenCV · FastAPI · React · ROS 2 (optional)
 
 ---
 
+## v1.2: sharper maps, smarter avoidance, tooling
+
+* LiDAR scan matching while mapping: drift 63 cm → 0.3 cm (simulated route)
+* Found and fixed a half-cell map shift → MCL 4.3 → 1.9 cm
+* Dynamic Window Approach planner around unmapped/moving obstacles
+* Coverage sweeps + scheduled patrols
+* White balance: 63–80 % → 97–98 % accuracy under coloured light
+* Flight recorder + offline replay; dashboard works on phones
+
+---
+
 ## Honest limitations
 
 * Without LiDAR the map is **experimental** (odometry drift, no loop closure)

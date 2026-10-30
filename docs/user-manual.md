@@ -162,6 +162,10 @@ now also report a shape (circle, square, rectangle, triangle).
 The dashboard works on phones: the menu opens from ☰ and the E-STOP stays
 in the header on every screen.
 
+| Overview | Menu |
+|---|---|
+| ![phone overview](assets/mobile_overview.png) | ![phone menu](assets/mobile_menu.png) |
+
 ## Simulation control (simulation mode only)
 
 The *Simulation* screen is a test bench:
