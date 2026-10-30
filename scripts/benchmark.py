@@ -203,6 +203,86 @@ def bench_localization(trials: int = 5):
     return {"track": track_err, "odom": odom_err, "ms": statistics.median(ms), "global": glob_err}
 
 
+def bench_white_balance(n_images: int = 200):
+    """Accuracy under coloured lighting without and with reference white balance."""
+    casts = {"neutral": (1, 1, 1), "warm": (0.7, 0.95, 1.25), "cool": (1.25, 1.0, 0.75), "green": (0.9, 1.2, 0.9)}
+    cfg = load_config()
+    out = {}
+    for name, cast in casts.items():
+        row = {}
+        for mode in ("off", "gray_world", "reference"):
+            p = VisionParams.from_config(cfg["vision"])
+            p.white_balance = mode
+            if mode == "reference":
+                white = np.clip(np.full((40, 40, 3), 200, np.float32) * np.array(cast), 0, 255).astype(np.uint8)
+                p.wb_gains = ColorDetector.reference_gains(white, (0, 0, 40, 40))
+            det = ColorDetector(p)
+            rng = np.random.default_rng(7)
+            tp = tot = 0
+            for _ in range(n_images):
+                img, truth = make_scene(rng, int(rng.integers(1, 5)))
+                img = np.clip(img.astype(np.float32) * np.array(cast), 0, 255).astype(np.uint8)
+                dets, _ = det.detect(img)
+                used = set()
+                for color, x, y, r in truth:
+                    tot += 1
+                    for i, d in enumerate(dets):
+                        if i not in used and math.dist(d.centroid, (x, y)) < r:
+                            used.add(i)
+                            tp += d.color == color
+                            break
+            row[mode] = tp / tot
+        out[name] = row
+    return out
+
+
+def bench_scan_matching():
+    """Offline LiDAR mapping along a route with biased odometry, with/without scan matching."""
+    from robot.localization.localizer import compose, inverse
+    from robot.mapping.occupancy_grid import OCCUPIED, OccupancyGrid
+    from robot.mapping.scan_matcher import ScanMatcher
+    from robot.simulation.world import SimWorld
+    cfg = load_config()
+    w = SimWorld(cfg["simulation"]["world"], cfg["chassis"], seed=1)
+    ref = OccupancyGrid.from_config(cfg["mapping"])
+    w.reference_grid(ref)
+    near = cv2.dilate((ref.ternary() == OCCUPIED).astype(np.uint8), np.ones((3, 3), np.uint8)).astype(bool)
+    truth = [(-1.0 + i * 0.05, -0.3, 0.0) for i in range(40)] + [(1.0, -0.3 - i * 0.05, -math.pi / 2) for i in range(15)] + \
+            [(1.0 - i * 0.05, -1.05, math.pi) for i in range(35)]
+    rng = np.random.default_rng(3)
+    odom = [truth[0]]
+    for i in range(1, len(truth)):
+        rel = compose(inverse(truth[i - 1]), truth[i])
+        odom.append(compose(odom[-1], (rel[0] * 1.05, rel[1] * 1.05, rel[2] + 0.006)))
+    res = {}
+    for matching in (False, True):
+        g = OccupancyGrid.from_config(cfg["mapping"])
+        m = ScanMatcher()
+        corr = (0.0, 0.0, 0.0)
+        times = []
+        for i, t in enumerate(truth):
+            pose = compose(corr, odom[i])
+            r = np.full(360, np.inf)
+            for k in range(360):
+                d = w.raycast(t[0], t[1], t[2] - math.pi + 2 * math.pi * k / 360, 6.0)
+                if d is not None:
+                    r[k] = d + rng.normal(0, 0.01)
+            if matching:
+                pts = ScanMatcher.scan_points(-math.pi, 2 * math.pi / 360, r, 6.0, m.max_beams)
+                t0 = time.perf_counter()
+                mr = m.match(g, pts, pose)
+                times.append((time.perf_counter() - t0) * 1000)
+                if mr is not None and mr.accepted:
+                    corr = compose(mr.pose, inverse(odom[i]))
+                    pose = mr.pose
+            g.integrate_scan(pose, -math.pi, 2 * math.pi / 360, r, 6.0, step=2)
+        occ = g.ternary() == OCCUPIED
+        res[matching] = {"final_err": math.dist(pose[:2], truth[-1][:2]),
+                         "precision": float((occ & near).sum() / max(1, occ.sum())),
+                         "ms": statistics.median(times) if times else None}
+    return res
+
+
 def bench_sorting(minutes):
     from robot.runtime import Robot
     cfg = load_config(overrides={"robot": {"mode": "simulation"}, "simulation": {"pickup_failure_rate": 0.1}})
@@ -247,6 +327,16 @@ def main() -> int:
     print(f"| Global localisation from a random kidnap (search + 2 rad spin) | {ok}/{len(lb['global'])} within 20 cm "
           f"(median {statistics.median(lb['global']) * 100:.1f} cm) |")
     print(f"| Particle filter update (400 particles, 36 beams) | {lb['ms']:.2f} ms median |")
+    wb = bench_white_balance()
+    for name, row in wb.items():
+        print(f"| Colour accuracy, {name} lighting (WB off / gray-world / reference) | "
+              f"{row['off'] * 100:.1f} % / {row['gray_world'] * 100:.1f} % / {row['reference'] * 100:.1f} % |")
+    sm = bench_scan_matching()
+    print(f"| LiDAR mapping, 4.5 m route, 5 % odometry error: final pose error (odometry / scan matching) | "
+          f"{sm[False]['final_err'] * 100:.1f} cm / {sm[True]['final_err'] * 100:.1f} cm |")
+    print(f"| Map wall precision (odometry / scan matching) | {sm[False]['precision'] * 100:.0f} % / "
+          f"{sm[True]['precision'] * 100:.0f} % |")
+    print(f"| Scan match time (90 beams, coarse+fine search) | {sm[True]['ms']:.1f} ms median |")
     med, worst = bench_estop()
     print(f"| Software e-stop latency (call → motor stop) | median {med:.1f} µs, max {worst:.1f} µs |")
     if args.sorting:
