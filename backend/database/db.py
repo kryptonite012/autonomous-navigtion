@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import os
-import shutil
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -125,4 +124,7 @@ class Database:
         if dst is None:
             raise RuntimeError("restore supports SQLite only")
         self.engine.dispose()
-        shutil.copy2(backup_file, dst)
+        # copy page by page through SQLite itself so the WAL of the live
+        # database is replaced too (a plain file copy would be overlaid by it)
+        with sqlite3.connect(backup_file) as source, sqlite3.connect(dst) as target:
+            source.backup(target)
