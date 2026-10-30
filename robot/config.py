@@ -47,10 +47,16 @@ def load_config(path: str | os.PathLike | None = None, overrides: dict | None = 
 
 
 def save_section(path: str | os.PathLike | None, section: str, value: Any) -> None:
-    """Persist one top level section back to the YAML file."""
+    """Persist one top level section back to the YAML file.
+
+    The file is rewritten without its comments, so the previous version is
+    kept as ``<name>.yaml.bak``.
+    """
     cfg_path = resolve_path(path or os.environ.get("NEXUS_CONFIG", DEFAULT_CONFIG))
     with open(cfg_path, "r", encoding="utf-8") as fh:
-        cfg = yaml.safe_load(fh) or {}
+        original = fh.read()
+    cfg = yaml.safe_load(original) or {}
+    cfg_path.with_suffix(".yaml.bak").write_text(original, encoding="utf-8")
     cfg[section] = value
     tmp = cfg_path.with_suffix(".tmp")
     with open(tmp, "w", encoding="utf-8") as fh:
