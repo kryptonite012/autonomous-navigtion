@@ -104,7 +104,7 @@ camera:
 vision:
   blur_kernel: 5
   morph_kernel: 5
-  min_area_px: 400
+  min_area_px: 150
   max_area_ratio: 0.6
   min_solidity: 0.6
   min_confidence: 0.45
@@ -159,7 +159,7 @@ sorting:
   unclassified_bin: 5
   bin_capacity: 10
   # region of the image (normalised) in which an object can be picked
-  pickup_zone: {x_min: 0.35, x_max: 0.65, y_min: 0.62, y_max: 0.98}
+  pickup_zone: {x_min: 0.38, x_max: 0.62, y_min: 0.67, y_max: 0.98}
   min_pickup_area_px: 3500
   max_retries: 2
   verify_timeout_s: 2.0
