@@ -24,8 +24,11 @@ flowchart TB
         subgraph Runtime["robot.runtime.Robot"]
             CTRL["Control loop 20 Hz"]
             SAF["SafetyController<br/>(only writer to motors)"]
-            ODO["Wheel odometry + IMU"]
+            ODO["Odometry EKF<br/>encoders + gyro"]
+            LOC["Localizer<br/>MCL on saved map"]
             MAP["Mapper<br/>log-odds grid"]
+            MIS["MissionRunner<br/>waypoints / patrols"]
+            OBJ["ObjectMap<br/>objects in world frame"]
             NAV["Navigator<br/>A*/Dijkstra, pure pursuit,<br/>recovery, frontier exploration"]
             VIS["VisionPipeline<br/>HSV + contours + tracker"]
             SORT["Sorter<br/>state machine"]
@@ -38,7 +41,11 @@ flowchart TB
     API --> AUTH --> SVC
     SVC --> DB
     SVC <--> Runtime
-    CTRL --> ODO & MAP & NAV
+    CTRL --> ODO & LOC & MAP & NAV & MIS
+    ODO --> LOC
+    MIS -- "goals" --> NAV
+    VIS --> OBJ
+    OBJ -- "known objects" --> SORT
     NAV -- "twist" --> SAF
     SORT -- "twist" --> SAF
     API -- "teleop twist" --> SAF
@@ -75,12 +82,13 @@ flowchart LR
 | Simulation | `robot/simulation` | 2D world (ray casting, collisions, objects) and devices implementing the same interfaces |
 | Factory | `robot/hardware/factory.py` | Probes devices, records missing ones, derives `capabilities` |
 | Safety | `robot/safety/controller.py` | Velocity/accel limits, obstacle zones, e-stop latch, battery, stale data, watchdog, stall detection |
-| Perception | `robot/vision` | HSV segmentation, morphology, contour filtering, contrast check, confidence, tracking, calibration |
+| Localisation | `robot/localization` | Odometry EKF (encoders + gyro), particle filter with likelihood field and correlative global search, map←odom correction — see [localization.md](localization.md) |
+| Perception | `robot/vision` | HSV segmentation, morphology, contour filtering, contrast check, confidence, tracking, calibration, object map (world positions of detections) |
 | Mapping | `robot/mapping` | Log-odds occupancy grid, ROS map_server I/O, map store |
-| Navigation | `robot/navigation` | Planners, path simplification, pure pursuit, potential field, state machine |
+| Navigation | `robot/navigation` | Planners, path simplification, pure pursuit, potential field, state machine, waypoint missions |
 | Sorting | `robot/sorting` | Arm sequences, search/approach/pick/verify/drop state machine |
 | Runtime | `robot/runtime.py` | Owns everything, runs the control loop, enforces mode rules |
-| Backend | `backend/` | REST, WebSocket, auth, persistence |
+| Backend | `backend/` | REST, WebSocket, auth, persistence, simulation control, Prometheus metrics |
 | Frontend | `frontend/` | Dashboard |
 | ROS 2 | `ros2_ws/src` | Optional Nav2/SLAM integration |
 
@@ -93,7 +101,7 @@ health/telemetry message carries a `simulated` flag.
 
 | Thread | Rate | Work |
 |---|---|---|
-| `control` | 20 Hz | read encoders/IMU/ranges/battery → odometry → safety inputs → mapper → navigator → safety tick |
+| `control` | 20 Hz | read encoders/IMU/ranges/battery → odometry EKF → particle filter (on motion) → safety inputs → mapper → navigator → missions → safety tick; low-battery return check at 1 Hz |
 | `vision` | camera FPS (15) | grab → quality check → detect → track → JPEG encode |
 | `cam-*` | camera rate | capture into a 1-frame buffer (always newest frame) |
 | `sorter` | 10 Hz | sorting state machine (blocking arm moves) |
@@ -120,9 +128,13 @@ Defence in depth, from most to least independent:
    * reverse limited to 0.06 m/s (no rear sensors);
    * command watchdog: no new command for 0.6 s → stop;
    * velocity and acceleration limits.
-4. **Navigator** holds position when the pose is invalid or stale and
-   gives up after a bounded number of recoveries.
-5. **API**: operator role required for motion, motion commands rate
+4. **Navigator** holds position when the pose is invalid or stale (including
+   a lost or still-searching particle filter) and gives up after a bounded
+   number of recoveries.
+5. **Low battery**: below `navigation.return_voltage` the current task is
+   aborted and the robot drives to the dock; below
+   `safety.battery_min_voltage` all motion is refused.
+6. **API**: operator role required for motion, motion commands rate
    limited, emergency stop open to every logged-in user and exempt from
    rate limiting.
 
@@ -138,7 +150,8 @@ sequenceDiagram
     participant S as SafetyController
     participant D as Motor driver
     C->>E: ticks, gyro
-    C->>C: odometry update (pose)
+    C->>C: odometry EKF update (odom pose)
+    C->>C: particle filter update if moved (map pose)
     C->>R: read()
     C->>S: update_ranges / update_battery / update_encoders
     C->>M: update(pose, ranges, scan)
@@ -160,3 +173,14 @@ sequenceDiagram
 
 The dashboard labels experimental maps and saved maps keep the flag in their
 YAML (`nexus.experimental: true`).
+
+## Operator features added in v1.1
+
+| Feature | Where |
+|---|---|
+| Map localisation (MCL), initial pose, global localisation | `robot/localization`, *Navigation* screen, `/api/localization/*` |
+| Waypoint missions and patrol loops, stored in the database | `robot/navigation/missions.py`, *Missions* screen, `/api/missions/*` |
+| Automatic return to dock on low battery | `Robot._check_low_battery`, `navigation.return_*` config |
+| Object map: detections placed in the world, sorter drives to known objects | `robot/vision/object_map.py`, *Object Detection* screen |
+| Simulation control room: fault injection, kidnapping, obstacles, scenario objects, ground-truth map | `backend/api/sim_routes.py`, *Simulation* screen (simulation mode only) |
+| Prometheus metrics | `GET /metrics` |

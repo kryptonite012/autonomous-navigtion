@@ -91,6 +91,13 @@ erDiagram
         bool success
         datetime timestamp
     }
+    MISSIONS {
+        int id PK
+        string name UK
+        text definition "JSON waypoints, loop, policy"
+        datetime created_at
+        datetime updated_at
+    }
     SCHEMA_VERSION {
         int version PK
         datetime applied_at
@@ -107,6 +114,7 @@ erDiagram
 | `sorting_records` | every completed sort attempt | kept |
 | `system_events` | every runtime event | kept |
 | `audit_log` | every authenticated mutating action and login | kept |
+| `missions` | when a mission is saved/deleted (migration 3) | kept |
 | camera frames | **never** — only the latest JPEG is held in memory | — |
 
 `sorting_status` values: `success` (bin sensor confirmed), `unverified`
