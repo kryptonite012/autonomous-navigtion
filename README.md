@@ -13,6 +13,13 @@ fully offline and comes with a web dashboard for live control.
   controller that every motion command goes through (stop/slow zones,
   latched e-stop and faults, stale-sensor blocking, command watchdog,
   battery cut-off, stall detection).
+* **Localisation that does not drift**: an odometry EKF (encoders + gyro)
+  plus Monte Carlo localisation against saved maps, with global
+  re-localisation after a kidnap (needs a LiDAR).
+* **Missions**: waypoint tours and patrol loops, with automatic return to
+  the dock on low battery.
+* **Test bench**: a simulation control room for fault injection, kidnapping,
+  obstacles and scenarios, plus Prometheus metrics.
 * **Honest results**: a sort counts as successful only when the bin sensor
   confirms the drop. Maps made without a LiDAR are labelled experimental.
   Simulated data is always marked as simulated.
@@ -23,9 +30,9 @@ fully offline and comes with a web dashboard for live control.
 
 ```
 robot/          robot runtime: hardware abstraction, drivers, simulation,
-                vision, mapping, navigation, sorting, safety
+                vision, localisation, mapping, navigation, missions, sorting, safety
 backend/        FastAPI app: REST, WebSocket, auth, database
-frontend/       React + TypeScript + Tailwind dashboard (12 screens)
+frontend/       React + TypeScript + Tailwind dashboard (14 screens)
 ros2_ws/        optional ROS 2 Jazzy packages (Nav2, SLAM Toolbox)
 config/         nexus.yaml (all tunables) and simulated worlds
 scripts/        Pi setup, hardware check, calibration, simulation, benchmark, backup
@@ -39,7 +46,7 @@ docs/           architecture, hardware, guides, reports
 ```bash
 python3 -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
-python3 -m pytest                                   # 89 passed, 7 hardware tests skipped
+python3 -m pytest                                   # 115 passed, 7 hardware tests skipped
 (cd frontend && npm ci && npm run build)
 python3 -m backend.main
 ```
@@ -68,6 +75,8 @@ wire the robot following [wiring.md](docs/hardware/wiring.md), then run
 | Topic | Document |
 |---|---|
 | System architecture, threads, safety design | [docs/architecture.md](docs/architecture.md) |
+| Localisation (EKF, particle filter, global search) | [docs/localization.md](docs/localization.md) |
+| Changes per release | [CHANGELOG.md](CHANGELOG.md) |
 | Bill of materials (INR), compatibility matrix | [docs/hardware/bom.md](docs/hardware/bom.md) |
 | Power, e-stop circuit, GPIO pinout, wiring | [docs/hardware/wiring.md](docs/hardware/wiring.md) |
 | Mechanical assembly | [docs/hardware/assembly.md](docs/hardware/assembly.md) |

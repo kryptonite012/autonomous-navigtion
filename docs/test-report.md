@@ -9,11 +9,11 @@
 | Python / OpenCV | 3.13 / 5.0 |
 | Mode | simulation (no physical hardware attached) |
 | Command | `python3 -m pytest` |
-| Result | **89 passed, 7 skipped** (the 7 skipped are hardware-in-the-loop tests) in ~58 s |
+| Result | **115 passed, 7 skipped** (the 7 skipped are hardware-in-the-loop tests) in ~2 min |
 
 ## Coverage by area
 
-### Unit tests (`tests/unit`, 62 tests)
+### Unit tests (`tests/unit`, 72 tests)
 
 | Area | File | What is checked |
 |---|---|---|
@@ -23,14 +23,18 @@
 | Planners | `test_planners.py` | A* and Dijkstra around a wall, equal path cost, unreachable goal, goal in obstacle, no corner cutting, path simplification, nearest free cell |
 | Vision | `test_vision.py` | each of 5 colours; lighting ×0.55–1.15; red vs orange; 5 objects of one colour; partial occlusion and image-border objects (lower confidence); random noise; tiny blobs; plain background; low-solidity shapes; distance only when calibrated; tracker IDs and blip rejection; HSV range suggestion incl. red wrap-around; range validation; tinted floor rejected |
 | Safety | `test_safety.py` | forward allowed when clear; stop zone blocks forward only; slow zone scaling; software e-stop latch/reset; hardware e-stop overrides and needs reset after release; stale and invalid sensors block forward; command watchdog; battery undervoltage fault; motor communication fault stays latched; drive stall; velocity limits; non-finite commands; e-stop call latency |
+| Odometry EKF | `test_ekf.py` | straight line, rotation, gyro overrides a slipping wheel, covariance growth/symmetry, reset |
+| Particle filter | `test_mcl.py` | simulated reference map; tracking corrects 8 % scale + heading drift (< 8 cm vs > 15 cm odometry); global localisation from scratch; minimum beams; localiser correction and auto/on modes |
 | Sorting | `test_sorter.py` | verified success; unknown colour → unclassified bin; no bin sensor → `unverified` (never success); drop not detected → `failed_verification`; failed pickup with retries; full bin skipped; servo failure → error state; config validation |
 
-### Integration tests (`tests/integration`, 27 tests)
+### Integration tests (`tests/integration`, 43 tests)
 
 | Area | File | What is checked |
 |---|---|---|
 | API | `test_api.py` | auth required on all routes; login lockout after 5 failures; logout revokes token; viewer/operator/admin permissions; viewer can e-stop; password policy; input validation (speed, path traversal in map names, HSV, bin numbers); e-stop blocks teleop and sorting until reset; navigation refused without a map; endpoint payloads; map save/rename/load/download/delete; WebSocket needs a token and streams telemetry; JPEG snapshot; audit log |
 | Simulation closed loop | `test_simulation.py` | missing hardware disables features and motion; manual drive moves robot and odometry matches ground truth (< 3 cm); watchdog stops robot; obstacle triggers stop with no collision; sensor disconnect blocks forward; hardware e-stop latch; motor failure fault; battery undervoltage; localisation loss holds position; navigation to a goal on a saved map (reached within 0.2 m, 0 collisions); end-to-end sort verified by the bin sensor into the correct bin |
+| Autonomy (simulation) | `test_autonomy.py` | MCL beats odometry while driving (< 10 cm); kidnapped robot re-localised (< 20 cm) with global search; ultrasonic-only robots keep MCL off; initial pose; 2-waypoint mission completes and returns home with 0 collisions; mission validation; low battery aborts the mission and heads to the dock; object map places the red object within 12 cm |
+| API v1.1 | `test_api_v2.py` | missions CRUD + validation + persistence across restarts; localisation endpoints; simulation fault injection, obstacles, scatter, teleport (incl. into an obstacle → 422), ground-truth map, reset; simulation routes refused in hardware mode; object map; map snapshot layers; Prometheus metrics |
 | Database | `test_database.py` | migrations create all tables and are idempotent; backup + restore; map name validation |
 
 ### Hardware-in-the-loop (`tests/hil`, 7 tests) — **NOT YET RUN**
@@ -49,7 +53,7 @@ break-beam.
 | **Navigation** empty room / furniture | ✅ simulation | `test_navigate_to_goal_with_saved_map`, `scripts/sim_explore.py` |
 | Narrow passages | ⚠️ partial | planner unit tests; not measured on a real robot |
 | Dynamic obstacles | ✅ simulation | `test_obstacle_triggers_stop` (stop), navigator replans from range obstacles |
-| Localisation failure | ✅ simulation | `test_localization_loss_holds_position` |
+| Localisation failure | ✅ simulation | `test_localization_loss_holds_position`; kidnapped robot + global localisation (`test_kidnapped_robot_global_localization`) |
 | **Sorting** correct colour / wrong classification / failed pickup / full bin / servo failure / release verification | ✅ unit + simulation | `test_sorter.py`, `test_sorting_end_to_end` |
 | Physical sorting with the real arm | ⏳ pending hardware | |
 | **Safety** e-stop / sensor disconnection / motor failure / undervoltage / communication timeout | ✅ unit + simulation | `test_safety.py`, `test_simulation.py` |
@@ -65,6 +69,18 @@ break-beam.
 | `scripts/benchmark.py --sorting` (3 min, 10 % pickup failure) | 5/5 objects in correct bins |
 
 ## Known issues / limitations found during testing
+
+* (v1.1) Uniform random particles alone sometimes locked onto a look-alike
+  pose after a kidnap (2 of 5 trials). Fixed by the correlative global
+  search and by requiring a good scan match before reporting convergence;
+  5 of 5 trials then re-localised to 3–4 cm.
+* (v1.1) A scripted test drive that curved into the table through the
+  ultrasonic blind spot made the wheels slip against it, and the particle
+  filter diverged (0.3 m). The test route was moved to open floor; the
+  failure mode is documented in docs/localization.md.
+* (v1.1) The first EKF design (constant-velocity state) lagged one step
+  behind during constant motion (3° error over a 90° turn). It was redesigned
+  to use encoder increments as the control input.
 
 * Without LiDAR, odometry drift reached ~0.15 m after ~2 minutes of
   exploration in simulation (2 % simulated wheel scale error). Maps from
