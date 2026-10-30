@@ -196,3 +196,7 @@ class WhiteBalanceRequest(BaseModel):
     roi: Optional[list[int]] = Field(default=None, min_length=4, max_length=4,
                                      description="x, y, w, h of a white/grey sheet (mode=reference)")
     persist: bool = False
+
+
+class RecordingName(BaseModel):
+    name: str = Field(min_length=1, max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9_\-]*$")
