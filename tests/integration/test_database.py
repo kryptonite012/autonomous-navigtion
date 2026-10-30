@@ -6,15 +6,15 @@ from backend.database.models import SystemEvent
 
 def test_migrations_create_all_tables(tmp_path):
     db = Database(f"sqlite:///{tmp_path / 'm.db'}")
-    assert db.migrate() == 2
+    assert db.migrate() == 3
     assert db.migrate() == 0          # idempotent
     tables = set(inspect(db.engine).get_table_names())
     for t in ("users", "robot_sessions", "maps", "object_detections", "sorting_records",
-              "telemetry", "system_events", "audit_log", "schema_version"):
+              "telemetry", "system_events", "audit_log", "schema_version", "missions"):
         assert t in tables
     cols = {c["name"] for c in inspect(db.engine).get_columns("telemetry")}
     assert {"pose_x", "pose_y", "pose_theta"} <= cols
-    assert db.version() == 2
+    assert db.version() == 3
 
 
 def test_backup_and_restore(tmp_path):

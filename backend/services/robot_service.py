@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import threading
 import time
@@ -11,10 +12,11 @@ from typing import Optional
 from sqlalchemy import delete, select
 
 from backend.database.db import Database
-from backend.database.models import (MapRecord, ObjectDetection, RobotSession, SortingRecord,
-                                     SystemEvent, Telemetry)
+from backend.database.models import (MapRecord, MissionRecord, ObjectDetection, RobotSession,
+                                     SortingRecord, SystemEvent, Telemetry)
 from backend.websocket.hub import Hub
 from robot.events import Event
+from robot.navigation.missions import Mission
 from robot.runtime import Robot
 from robot.sorting.sorter import SortRecord
 from robot.vision.detector import Detection
@@ -40,6 +42,7 @@ class RobotService:
         robot.subscribe(self._on_event)
         robot.vision.add_listener(self._on_detections)
         robot.sorter.on_record = self._on_sort_record
+        self._load_missions()
 
     # ------------------------------------------------------------- lifecycle
     def start(self) -> None:
@@ -172,6 +175,32 @@ class RobotService:
         with self.db.session() as s:
             s.execute(delete(Telemetry).where(Telemetry.timestamp < cutoff))
             s.execute(delete(ObjectDetection).where(ObjectDetection.timestamp < cutoff))
+
+    # -------------------------------------------------------------- missions
+    def _load_missions(self) -> None:
+        with self.db.session() as s:
+            for rec in s.execute(select(MissionRecord)).scalars():
+                try:
+                    self.robot.mission_library[rec.name] = Mission.from_dict(json.loads(rec.definition))
+                except (ValueError, KeyError, TypeError) as exc:
+                    log.warning("skipping invalid stored mission %s: %s", rec.name, exc)
+
+    def save_mission(self, mission: Mission) -> None:
+        mission.validate(self.robot.navigator.named_locations)
+        data = json.dumps(mission.as_dict())
+        with self.db.session() as s:
+            rec = s.execute(select(MissionRecord).where(MissionRecord.name == mission.name)).scalar_one_or_none()
+            if rec is None:
+                s.add(MissionRecord(name=mission.name, definition=data))
+            else:
+                rec.definition = data
+                rec.updated_at = datetime.now(timezone.utc)
+        self.robot.mission_library[mission.name] = mission
+
+    def delete_mission(self, name: str) -> bool:
+        with self.db.session() as s:
+            n = s.execute(delete(MissionRecord).where(MissionRecord.name == name)).rowcount
+        return self.robot.mission_library.pop(name, None) is not None or n > 0
 
     # ----------------------------------------------------------------- maps
     def register_map(self, name: str, path: str, resolution: float, experimental: bool) -> None:
