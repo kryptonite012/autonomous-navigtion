@@ -56,7 +56,8 @@ class Sorter:
                  pose: Callable[[], Optional[tuple[float, float, float]]],
                  on_record: Optional[Callable[[SortRecord], None]] = None,
                  on_event: Optional[Callable[[str, str, str], None]] = None,
-                 frame_size: tuple[int, int] = (640, 480)):
+                 frame_size: tuple[int, int] = (640, 480),
+                 front_distance: Optional[Callable[[], Optional[float]]] = None):
         self.sc = cfg["sorting"]
         self.arm = arm
         self.bin_sensor = bin_sensor
@@ -64,6 +65,8 @@ class Sorter:
         self.drive = drive
         self.stop_drive = stop_drive
         self.pose = pose
+        self.front_distance = front_distance or (lambda: None)
+        self._open_heading: Optional[tuple[float, float]] = None
         self.on_record = on_record or (lambda r: None)
         self.on_event = on_event or (lambda *a: None)
         self.frame_w, self.frame_h = frame_size
@@ -223,22 +226,54 @@ class Sorter:
                 self._last_heading = pose[2]
             self._search_turned += abs(normalize_angle(pose[2] - self._last_heading))
             self._last_heading = pose[2]
+            # remember the most open direction seen during the spin
+            fd = self.front_distance()
+            fd = 2.5 if fd is None else fd
+            if self._open_heading is None or fd > self._open_heading[1]:
+                self._open_heading = (pose[2], fd)
         if self._search_turned >= 2 * math.pi:
             self._search_cycles += 1
             self._reset_search()
             if self._search_cycles >= self.max_search_cycles:
                 self._finish("no sortable objects found")
                 return
-            # move to a new spot before scanning again; the safety layer
-            # blocks this if something is in front
-            t_end = time.time() + 1.5
-            while time.time() < t_end and not self._stop.is_set():
-                self.drive(0.12, 0.0)
-                time.sleep(0.05)
-            self.stop_drive()
+            self._relocate()
             return
         self.message = "searching for objects"
         self.drive(0.0, 0.6)
+
+    def _relocate(self) -> None:
+        """Turn towards the most open direction seen and drive ~0.6 m.
+
+        Small objects further than ~1.5 m are below the minimum blob size,
+        so the robot has to move to find them. The safety controller still
+        stops the drive if anything appears in front.
+        """
+        self.message = "moving to a new search position"
+        target = self._open_heading[0] if self._open_heading else None
+        self._open_heading = None
+        t_end = time.time() + 4.0
+        while target is not None and time.time() < t_end and not self._stop.is_set():
+            pose = self.pose()
+            if pose is None:
+                break
+            err = normalize_angle(target - pose[2])
+            if abs(err) < 0.1:
+                break
+            self.drive(0.0, max(-0.8, min(0.8, 2.0 * err)))
+            time.sleep(0.05)
+        start = self.pose()
+        t_end = time.time() + 6.0
+        while time.time() < t_end and not self._stop.is_set():
+            pose = self.pose()
+            if pose is None or start is None or math.dist(pose[:2], start[:2]) > 0.6:
+                break
+            fd = self.front_distance()
+            if fd is not None and fd < 0.35:
+                break
+            self.drive(0.15, 0.0)
+            time.sleep(0.05)
+        self.stop_drive()
 
     def _finish(self, reason: str) -> None:
         self.stop_drive()

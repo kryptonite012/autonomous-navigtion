@@ -59,7 +59,8 @@ class Robot:
                              drive=lambda v, w: self.safety.command(v, w, "sorting"),
                              stop_drive=lambda: self.safety.stop("sorting"),
                              pose=self._pose_if_valid, on_event=self._event,
-                             frame_size=(cfg["camera"]["width"], cfg["camera"]["height"]))
+                             frame_size=(cfg["camera"]["width"], cfg["camera"]["height"]),
+                             front_distance=lambda: self.safety.status.obstacle_front_m)
         self.mode = Mode.IDLE
         self.rate = cfg["robot"]["control_rate_hz"]
         self.ranges: list[RangeReading] = []
