@@ -20,6 +20,9 @@ export default function Navigation() {
   const [gy, setGy] = useState("");
   const [gth, setGth] = useState("");
   const [locName, setLocName] = useState("");
+  const [clickMode, setClickMode] = useState<"goal" | "pose">("goal");
+  const [poseHeading, setPoseHeading] = useState("0");
+  const loc = state?.localization;
   const nav = navigation ?? state?.navigation;
   const op = can("operator");
   const motionOk = state?.safety.motion_allowed ?? false;
@@ -27,11 +30,32 @@ export default function Navigation() {
   const sendGoal = (x: number, y: number, theta?: number) =>
     run(() => api.post("/api/navigation/goal", { x, y, theta }), `Goal (${x.toFixed(2)}, ${y.toFixed(2)}) sent`);
 
+  const pick = (x: number, y: number) => {
+    x = +x.toFixed(2);
+    y = +y.toFixed(2);
+    if (clickMode === "pose") {
+      const th = ((+poseHeading || 0) * Math.PI) / 180;
+      run(() => api.post("/api/localization/initial-pose", { x, y, theta: th }), `Initial pose set to (${x}, ${y})`);
+      setClickMode("goal");
+    } else {
+      sendGoal(x, y);
+    }
+  };
+
   return (
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-      <Card title="Map — click to set a destination" className="xl:col-span-2"
-            actions={nav && <Pill tone={STATE_TONE[nav.state] ?? "muted"}>{nav.state}</Pill>}>
-        <LiveMap height={520} onPick={op ? (x, y) => sendGoal(+x.toFixed(2), +y.toFixed(2)) : undefined} />
+      <Card title={clickMode === "pose" ? "Map — click where the robot is" : "Map — click to set a destination"}
+            className="xl:col-span-2"
+            actions={<>
+              {clickMode === "pose" && <Pill tone="warn">setting initial pose</Pill>}
+              {nav && <Pill tone={STATE_TONE[nav.state] ?? "muted"}>{nav.state}</Pill>}
+            </>}>
+        <LiveMap height={520} onPick={op ? pick : undefined} />
+        <div className="flex gap-4 text-xs text-slate-500 mt-2">
+          <span className="text-accent">● estimated pose (ring = 2σ)</span>
+          <span className="text-violet-400">— particles</span>
+          <span>■ objects seen by the camera</span>
+        </div>
         {nav?.message && <div className="text-sm text-slate-400 mt-2">{nav.message}</div>}
       </Card>
       <div className="space-y-6">
@@ -51,6 +75,33 @@ export default function Navigation() {
                     onClick={() => run(() => api.post("/api/navigation/pause"), "Paused")}>Pause</button>
             <button className="btn-ghost" disabled={!op || busy || nav?.state !== "paused"}
                     onClick={() => run(() => api.post("/api/navigation/resume"), "Resumed")}>Resume</button>
+          </div>
+        </Card>
+        <Card title="Localisation" actions={loc && (
+          <Pill tone={!loc.active ? "muted" : loc.searching ? "warn" : loc.converged ? "ok" : "bad"}>
+            {!loc.active ? "odometry only" : loc.searching ? "searching" : loc.converged ? "localised" : "uncertain"}
+          </Pill>)}>
+          <div className="kv"><span>Method</span><span>{pose?.source ?? "—"}</span></div>
+          <div className="kv"><span>Position σ</span><span>{fmt(pose?.std_xy, 3)} m</span></div>
+          <div className="kv"><span>Heading σ</span><span>{pose?.std_theta != null ? fmt((pose.std_theta * 180) / Math.PI, 1) : "—"}°</span></div>
+          {loc?.active && (
+            <>
+              <div className="kv"><span>Map</span><span>{loc.map}</span></div>
+              <div className="kv"><span>Particles / Neff</span><span>{loc.particles} / {fmt(loc.neff, 0)}</span></div>
+              <div className="kv"><span>Scan match</span><span>{fmt(loc.likelihood * 100, 0)} %</span></div>
+            </>
+          )}
+          {!loc?.enabled && <p className="text-xs text-slate-500 mt-2">Map localisation needs a LiDAR (or localization.mode: on, experimental). Without it the pose is odometry only and drifts; set the pose again when it does.</p>}
+          {loc?.experimental && <p className="text-xs text-warn mt-2">Experimental: localising with sparse range sensors.</p>}
+          <div className="flex gap-2 mt-3 items-end">
+            <label className="w-24"><span className="label">Heading °</span>
+              <input className="input" value={poseHeading} onChange={(e) => setPoseHeading(e.target.value)} /></label>
+            <button className={clickMode === "pose" ? "btn-warn" : "btn-ghost"} disabled={!op}
+                    onClick={() => setClickMode(clickMode === "pose" ? "goal" : "pose")}>
+              {clickMode === "pose" ? "Cancel" : "Set pose on map"}
+            </button>
+            <button className="btn-ghost" disabled={!op || busy || !loc?.active}
+                    onClick={() => run(() => api.post("/api/localization/global"), "Global localisation started")}>Global</button>
           </div>
         </Card>
         <Card title="Destination">
