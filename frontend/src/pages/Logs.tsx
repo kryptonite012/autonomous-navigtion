@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Card, Pill } from "../components/ui";
 import { usePoll } from "../hooks/useApiAction";
+import Recordings from "../dashboards/Recordings";
 import { useAuth } from "../hooks/useAuth";
 
 interface EventRow {
@@ -28,7 +29,7 @@ const TONE: Record<string, "ok" | "warn" | "bad" | "info" | "muted"> = {
 export default function Logs() {
   const [severity, setSeverity] = useState("");
   const [filter, setFilter] = useState("");
-  const [tab, setTab] = useState<"events" | "audit">("events");
+  const [tab, setTab] = useState<"events" | "audit" | "recordings">("events");
   const { can } = useAuth();
   const { data: events } = usePoll<EventRow[]>(`/api/logs/events?limit=500${severity ? `&severity=${severity}` : ""}`, 3000);
   const { data: audit } = usePoll<AuditRow[]>(tab === "audit" && can("admin") ? "/api/users/audit?limit=300" : null, 5000);
@@ -47,6 +48,7 @@ export default function Logs() {
     <Card title={
       <div className="flex gap-4 normal-case tracking-normal">
         <button className={tab === "events" ? "text-white" : "text-slate-500"} onClick={() => setTab("events")}>System events</button>
+        <button className={tab === "recordings" ? "text-white" : "text-slate-500"} onClick={() => setTab("recordings")}>Flight recorder</button>
         {can("admin") && <button className={tab === "audit" ? "text-white" : "text-slate-500"} onClick={() => setTab("audit")}>Audit log</button>}
       </div>
     } actions={tab === "events" && (
@@ -59,7 +61,7 @@ export default function Logs() {
         <button className="btn-ghost" onClick={exportCsv}>Export CSV</button>
       </>
     )}>
-      {tab === "events" ? (
+      {tab === "recordings" ? <Recordings canOperate={can("operator")} /> : tab === "events" ? (
         <table className="w-full text-sm">
           <thead><tr className="table-head"><th className="w-44">Time</th><th className="w-24">Severity</th><th className="w-48">Type</th><th>Description</th></tr></thead>
           <tbody>

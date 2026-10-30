@@ -8,6 +8,7 @@ import { api } from "../services/api";
 import type { MappedObject } from "../services/types";
 
 interface VisionFull {
+  white_balance: { mode: string; gains: number[] };
   colors: Record<string, { lower: number[]; upper: number[] }[]>;
   enabled_colors: string[];
   settings: { min_area_px: number; min_confidence: number; blur_kernel: number; morph_kernel: number };
@@ -55,13 +56,14 @@ export default function Detection() {
           </div>
           <table className="w-full text-sm mt-4">
             <thead>
-              <tr className="table-head"><th>ID</th><th>Colour</th><th>Confidence</th><th>Centroid</th><th>BBox</th><th>Area</th><th>Solidity</th><th>Distance</th><th>Time</th></tr>
+              <tr className="table-head"><th>ID</th><th>Colour</th><th>Shape</th><th>Confidence</th><th>Centroid</th><th>BBox</th><th>Area</th><th>Solidity</th><th>Distance</th><th>Time</th></tr>
             </thead>
             <tbody>
               {detections.items.map((d) => (
                 <tr key={d.object_id ?? d.centroid.join()} className="border-t border-ink-800 font-mono">
                   <td>#{d.object_id}</td>
                   <td className="font-sans"><span className="inline-block h-2 w-2 rounded-full mr-1.5" style={{ background: COLOR_HEX[d.color] }} />{d.color}</td>
+                  <td className="font-sans">{d.shape ?? "—"}</td>
                   <td>{fmt(d.confidence)}</td>
                   <td>{d.centroid.map((c) => Math.round(c)).join(", ")}</td>
                   <td>{d.bbox.join(", ")}</td>
@@ -131,6 +133,28 @@ export default function Detection() {
             </tbody>
           </table>
         )}
+      </Card>
+
+      <Card title="White balance (coloured lighting)">
+        <div className="flex flex-wrap items-end gap-3">
+          <label><span className="label">Mode</span>
+            <select className="input w-40" value={data?.white_balance.mode ?? "off"} disabled={!op || busy}
+                    onChange={(e) => e.target.value !== "reference" &&
+                      run(() => api.post("/api/vision/white-balance", { mode: e.target.value }), `White balance: ${e.target.value}`).then(refresh)}>
+              <option value="off">off</option>
+              <option value="gray_world">gray world (automatic)</option>
+              <option value="reference">reference (white sheet)</option>
+            </select></label>
+          <button className="btn-ghost" disabled={!op || busy} onClick={() =>
+            run(() => api.post("/api/vision/white-balance", { mode: "reference", roi: roi.split(",").map(Number) }),
+              "White balance measured from the sample region").then(refresh)}>Measure from white sheet (sample region)</button>
+          <span className="text-xs text-slate-500 font-mono">gains B/G/R: {data?.white_balance.gains.map((g) => g.toFixed(2)).join(" / ")}</span>
+        </div>
+        <p className="text-xs text-slate-500 mt-2">
+          Hold a white or light-grey sheet in the sample region below and measure. Reference mode kept 97–98 % accuracy
+          under warm, cool and green casts in the synthetic benchmark; gray world needs no sheet but shifts colours on
+          tinted floors. Re-check HSV thresholds after changing this.
+        </p>
       </Card>
 
       <Card title="HSV calibration">

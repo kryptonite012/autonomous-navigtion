@@ -89,6 +89,13 @@ export default function Mapping() {
           <div className="kv"><span>Unknown</span><span>{fmt((st?.unknown_ratio ?? 0) * 100, 1)} %</span></div>
           <div className="kv"><span>Sensor updates</span><span>{st?.updates ?? 0}</span></div>
           <div className="kv"><span>Loaded map</span><span>{st?.loaded_map ?? "—"}</span></div>
+          {st?.scan_matching && (
+            <>
+              <div className="kv"><span>Scan matches (accepted)</span><span>{st.scan_matching.matches} ({st.scan_matching.accepted})</span></div>
+              <div className="kv"><span>Last match score / shift</span><span>{st.scan_matching.last_score ?? "—"} / {st.scan_matching.last_shift_m ?? "—"} m</span></div>
+              <div className="kv"><span>Match time</span><span>{st.scan_matching.last_ms} ms</span></div>
+            </>
+          )}
         </Card>
       </div>
     </div>

@@ -63,7 +63,7 @@ export default function Navigation() {
           <div className="kv"><span>Current</span><span>({fmt(pose?.x)}, {fmt(pose?.y)}) {pose ? fmt((pose.theta * 180) / Math.PI, 0) : "—"}°</span></div>
           <div className="kv"><span>Target</span><span>{nav?.goal ? `(${fmt(nav.goal.x)}, ${fmt(nav.goal.y)})${nav.goal.name ? " " + nav.goal.name : ""}` : "—"}</span></div>
           <div className="kv"><span>Distance</span><span>{fmt(nav?.distance_remaining)} m</span></div>
-          <div className="kv"><span>Planner</span><span>{nav?.planner ?? "—"}</span></div>
+          <div className="kv"><span>Planner / controller</span><span>{nav?.planner ?? "—"} / {nav?.controller ?? "—"}</span></div>
           <div className="kv"><span>Path points</span><span>{nav?.path.length ?? 0}</span></div>
           <div className="kv"><span>Recoveries</span><span>{nav?.recoveries ?? 0}</span></div>
           <div className="grid grid-cols-2 gap-2 mt-3">
