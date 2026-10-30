@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Card, Pill, fmt } from "../components/ui";
 import LiveMap from "../dashboards/LiveMap";
+import { CoverageCard, SchedulesCard } from "../dashboards/MissionExtras";
 import { useApiAction, usePoll } from "../hooks/useApiAction";
 import { useAuth } from "../hooks/useAuth";
 import { useRobot } from "../hooks/useRobot";
@@ -129,6 +130,9 @@ export default function Missions() {
             With a low battery (below navigation.return_voltage) any running mission is aborted and the robot drives to the dock.
           </p>
         </Card>
+
+        <CoverageCard disabled={!op} onCreated={refresh} />
+        <SchedulesCard missions={(missions ?? []).map((m) => m.name)} disabled={!op} />
       </div>
     </div>
   );
