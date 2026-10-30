@@ -84,6 +84,10 @@ field, and the filter is seeded around the 12 best candidates with 10× the
 usual particle count. As the robot turns or moves, the wrong candidates lose
 weight; once converged the filter shrinks back to 400 particles.
 
+| Kidnapped (estimate cyan, truth green dashed) | After *Global* + a short spin |
+|---|---|
+| ![kidnapped](assets/simulation_kidnapped.png) | ![relocalised](assets/simulation_relocalized.png) |
+
 In simulation (5 × 4 m room) this re-localised a kidnapped robot to 3–4 cm
 in 5 of 5 trials within about 2 s of spinning in place. Uniform random
 particles alone sometimes locked onto the wrong place, which is why the
