@@ -21,6 +21,7 @@ from robot.hardware.base import RangeReading
 from robot.mapping.occupancy_grid import FREE, UNKNOWN, OccupancyGrid
 from robot.motors.kinematics import normalize_angle
 from robot.navigation.control import PurePursuit, potential_field
+from robot.navigation.dwa import DWAConfig, DWAPlanner
 from robot.navigation.planners import clearance_cost, line_free, nearest_free, plan, simplify
 
 log = logging.getLogger(__name__)
@@ -64,6 +65,15 @@ class Navigator:
         self.named_locations: dict[str, list[float]] = dict(nc.get("named_locations", {}))
         self.follower = PurePursuit(nc["lookahead_m"], ch["max_linear_mps"] * 0.8,
                                     ch["max_angular_rps"] * 0.8, self.goal_tol)
+        # local controller: "dwa" (default) or "pure_pursuit" (pure pursuit + potential field)
+        self.controller = nc.get("controller", "dwa")
+        dc = nc.get("dwa", {})
+        self.dwa = DWAPlanner(DWAConfig(max_v=ch["max_linear_mps"] * 0.8, max_w=ch["max_angular_rps"] * 0.8,
+                                        acc_v=ch["max_linear_accel_mps2"], robot_radius=ch["robot_radius_m"],
+                                        **{k: v for k, v in dc.items() if k in DWAConfig.__dataclass_fields__}))
+        self.dwa_lookahead = nc.get("dwa_lookahead_m", 0.5)
+        self._last_cmd = (0.0, 0.0)
+        self._scan_points: list[tuple[float, float]] = []
         self.state = NavState.IDLE
         self.goal: Optional[Goal] = None
         self.path: list[tuple[float, float]] = []
@@ -337,8 +347,54 @@ class Navigator:
 
             target, self.path_idx = self.follower.target_point(pose, self.path, self.path_idx)
             final = self.path_idx == len(self.path) - 1
-            v, w = self.follower.compute(pose, target, final)
-            return potential_field(ranges, v, w)
+            if self.controller == "dwa":
+                cmd = self._dwa_step(pose, final)
+            else:
+                v, w = self.follower.compute(pose, target, final)
+                cmd = potential_field(ranges, v, w)
+            self._last_cmd = cmd if cmd is not None else (0.0, 0.0)
+            return cmd
+
+    def set_scan_points(self, points: list[tuple[float, float]]) -> None:
+        """World-frame LiDAR points from the latest scan (used by DWA)."""
+        with self._lock:
+            self._scan_points = points
+
+    def _dwa_target(self, pose) -> tuple[float, float]:
+        for p in self.path[self.path_idx:]:
+            if math.dist(pose[:2], p) >= self.dwa_lookahead:
+                return p
+        return self.path[-1]
+
+    def _dwa_obstacles(self, pose) -> np.ndarray:
+        grid = self.grid_provider()
+        pts: list[tuple[float, float]] = []
+        cx, cy = grid.world_to_cell(pose[0], pose[1])
+        r = int(1.0 / grid.resolution)
+        y0, y1 = max(0, cy - r), min(grid.height, cy + r + 1)
+        x0, x1 = max(0, cx - r), min(grid.width, cx + r + 1)
+        if y1 > y0 and x1 > x0:
+            sub = grid.ternary()[y0:y1, x0:x1]
+            ys, xs = np.nonzero(sub == 100)
+            pts.extend(grid.cell_to_world(int(x) + x0, int(y) + y0) for x, y in zip(xs, ys))
+        now = time.time()
+        # only fresh range hits: older ones belong to objects that may have moved
+        pts.extend((ox, oy) for ox, oy, t in self._local_obstacles if now - t < 1.0)
+        pts.extend(self._scan_points)
+        return np.array(pts, dtype=np.float64).reshape(-1, 2)
+
+    def _dwa_step(self, pose, final: bool) -> Optional[tuple[float, float]]:
+        target = self._dwa_target(pose)
+        err = normalize_angle(math.atan2(target[1] - pose[1], target[0] - pose[0]) - pose[2])
+        if abs(err) > math.radians(90):
+            # facing away from the path: turn on the spot first
+            return 0.0, math.copysign(min(self.dwa.cfg.max_w, 1.0 + abs(err)), err)
+        cmd = self.dwa.compute(pose, self._last_cmd, target, self._dwa_obstacles(pose), final)
+        if cmd is None:
+            # boxed in: stop; the stuck detector starts a recovery if it persists
+            self.message = "no collision-free trajectory, waiting"
+            return 0.0, 0.0
+        return cmd
 
     def _begin_recovery(self, now: float, reason: str) -> Optional[tuple[float, float]]:
         self.recoveries += 1
@@ -386,5 +442,7 @@ class Navigator:
                 "recoveries": self.recoveries,
                 "exploring": self.exploring,
                 "planner": self.algorithm,
+                "controller": self.controller,
+                "local_trajectory": self.dwa.last_trajectory if self.controller == "dwa" else [],
                 "named_locations": self.named_locations,
             }
