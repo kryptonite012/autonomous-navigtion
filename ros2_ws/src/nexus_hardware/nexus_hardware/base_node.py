@@ -39,7 +39,8 @@ sys.path.insert(0, os.environ.get("NEXUS_ROOT", os.path.expanduser("~/PROJECT-NE
 
 from robot.config import load_config  # noqa: E402
 from robot.hardware.factory import build_hardware  # noqa: E402
-from robot.motors.kinematics import DiffDriveKinematics, WheelOdometry  # noqa: E402
+from robot.localization.ekf import OdometryEKF  # noqa: E402
+from robot.motors.kinematics import DiffDriveKinematics  # noqa: E402
 from robot.safety.controller import SafetyConfig, SafetyController  # noqa: E402
 
 
@@ -62,7 +63,7 @@ class NexusBase(Node):
             self._clock.start()
         ch = cfg["chassis"]
         self.kin = DiffDriveKinematics(ch["wheel_radius_m"], ch["wheel_base_m"], ch["max_linear_mps"] * 1.6)
-        self.odom = WheelOdometry(self.kin, ch["encoder_ticks_per_rev"], gyro_weight=0.85 if self.hw.imu else 0.0)
+        self.odom = OdometryEKF(self.kin, ch["encoder_ticks_per_rev"])
         self.safety = SafetyController(self.hw.motors, self.kin, SafetyConfig.from_config(cfg), self.hw.estop,
                                        on_event=self._on_event,
                                        expected_sensors=[r.name for r in self.hw.ranges])
@@ -131,8 +132,12 @@ class NexusBase(Node):
             (o.pose.pose.orientation.x, o.pose.pose.orientation.y,
              o.pose.pose.orientation.z, o.pose.pose.orientation.w) = q
             o.twist.twist.linear.x, o.twist.twist.angular.z = self.odom.v, self.odom.w
-            o.pose.covariance[0] = o.pose.covariance[7] = 0.01
-            o.pose.covariance[35] = 0.05
+            # covariance from the EKF (x, y, yaw); z/roll/pitch unused
+            P = self.odom.P
+            for (i, j), (a, b) in {(0, 0): (0, 0), (0, 1): (0, 1), (1, 0): (1, 0), (1, 1): (1, 1),
+                                   (0, 5): (0, 2), (5, 0): (2, 0), (1, 5): (1, 2), (5, 1): (2, 1),
+                                   (5, 5): (2, 2)}.items():
+                o.pose.covariance[i * 6 + j] = float(P[a, b])
             self.odom_pub.publish(o)
             tf = TransformStamped()
             tf.header.stamp, tf.header.frame_id, tf.child_frame_id = stamp, "odom", "base_footprint"
