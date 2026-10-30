@@ -100,6 +100,7 @@ camera:
   focal_length_px: 520.0
   mount_height_m: 0.11
   mount_pitch_deg: -20.0
+  mount_forward_m: 0.0       # camera ahead of the wheel axis (object map projection)
 
 vision:
   blur_kernel: 5
@@ -150,6 +151,26 @@ navigation:
   named_locations:
     home: [0.0, 0.0, 0.0]
     dock: [-0.5, 0.0, 3.1416]
+  home_location: home
+  # abort the current task and drive to return_location when the battery
+  # drops below return_voltage (the hard cut-off is safety.battery_min_voltage)
+  return_home_on_low_battery: true
+  return_voltage: 7.0
+  return_location: dock
+
+localization:
+  # auto: particle filter only when a LiDAR is present (3-4 sparse range
+  # beams cannot localise reliably); on: always (experimental without LiDAR)
+  mode: auto
+  particles: 400
+  max_beams: 36
+  sigma_hit_m: 0.08
+  update_min_distance_m: 0.05
+  update_min_angle_rad: 0.1
+  converged_std_m: 0.15
+  converged_std_rad: 0.25
+  lost_std_m: 0.5
+  range_sensor_offset_m: 0.1
 
 sorting:
   bins:

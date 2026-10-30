@@ -15,12 +15,16 @@ from robot import system_metrics
 from robot.events import Event, EventBus
 from robot.hardware.base import HealthState, RangeReading
 from robot.hardware.factory import HardwareSet, build_hardware
+from robot.localization.ekf import OdometryEKF
+from robot.localization.localizer import Localizer
 from robot.mapping.mapper import Mapper
-from robot.motors.kinematics import DiffDriveKinematics, WheelOdometry
+from robot.motors.kinematics import DiffDriveKinematics
+from robot.navigation.missions import Mission, MissionRunner
 from robot.navigation.navigator import NavState, Navigator
 from robot.safety.controller import SafetyConfig, SafetyController
 from robot.sorting.arm import SortingArm
 from robot.sorting.sorter import Sorter
+from robot.vision.object_map import ObjectMap
 from robot.vision.pipeline import VisionPipeline
 
 log = logging.getLogger(__name__)
@@ -31,6 +35,7 @@ class Mode(str, enum.Enum):
     MANUAL = "manual"
     MAPPING = "mapping"
     NAVIGATION = "navigation"
+    MISSION = "mission"
     SORTING = "sorting"
 
 
@@ -47,20 +52,36 @@ class Robot:
         self.caps = self.hw.capabilities()
         ch = cfg["chassis"]
         self.kin = DiffDriveKinematics(ch["wheel_radius_m"], ch["wheel_base_m"], ch["max_linear_mps"] * 1.6)
-        self.odom = WheelOdometry(self.kin, ch["encoder_ticks_per_rev"],
-                                  gyro_weight=0.85 if self.hw.imu else 0.0)
+        # odometry EKF (encoders + gyro) in the odom frame; the localiser adds
+        # the map correction when a map is loaded
+        self.odom = OdometryEKF(self.kin, ch["encoder_ticks_per_rev"])
+        lc = cfg.get("localization", {})
+        self.localizer = Localizer(cfg, self.hw.lidar is not None,
+                                   lc.get("range_sensor_offset_m", ch["robot_radius_m"] * 0.8), on_event=self._event)
         self.safety = SafetyController(self.hw.motors, self.kin, SafetyConfig.from_config(cfg), self.hw.estop,
                                        on_event=self._event, expected_sensors=[r.name for r in self.hw.ranges])
         self.mapper = Mapper(cfg, self.hw.lidar is not None, bool(self.hw.ranges), ch["robot_radius_m"])
         self.navigator = Navigator(cfg, lambda: self.mapper.grid, on_event=self._event)
+        nc = cfg["navigation"]
+        self.missions = MissionRunner(self.navigator, nc.get("home_location", "home"), on_event=self._event)
+        self.mission_library: dict[str, Mission] = {}
         self.vision = VisionPipeline(self.hw.camera, cfg)
+        if self.simulated and self.vision.available:
+            # the synthetic camera is rendered with exactly these intrinsics
+            # and mount values, so in simulation it is calibrated by construction
+            self.vision.detector.calibrated = True
+        self.objects = ObjectMap(camera_forward_m=cfg["camera"].get("mount_forward_m", 0.0))
+        self.vision.add_listener(lambda dets: self.objects.update(dets, self._pose_if_valid())
+                                 if self.vision.detector.calibrated else None)
         arm = SortingArm(self.hw.servos, cfg["sorting"]) if self.hw.servos else None
         self.sorter = Sorter(cfg, arm, self.hw.bin_sensor, self.vision.latest,
                              drive=lambda v, w: self.safety.command(v, w, "sorting"),
                              stop_drive=lambda: self.safety.stop("sorting"),
                              pose=self._pose_if_valid, on_event=self._event,
                              frame_size=(cfg["camera"]["width"], cfg["camera"]["height"]),
-                             front_distance=lambda: self.safety.status.obstacle_front_m)
+                             front_distance=lambda: self.safety.status.obstacle_front_m,
+                             known_objects=lambda: [(o.color, o.x, o.y) for o in self.objects.candidates()],
+                             on_picked=self._on_picked)
         self.mode = Mode.IDLE
         self.rate = cfg["robot"]["control_rate_hz"]
         self.ranges: list[RangeReading] = []
@@ -80,6 +101,7 @@ class Robot:
         self._sim_clock = None
         self._teleop_time = 0.0
         self._last_scan = None
+        self._returning_low_battery = False
 
     # ----------------------------------------------------------------- events
     def _event(self, type_: str, severity: str, description: str) -> None:
@@ -178,11 +200,16 @@ class Robot:
             self._bat_t = now
             self.battery_v = self.hw.battery.voltage()
             self.safety.update_battery(self.battery_v)
+            self._check_low_battery()
         scan = self.hw.lidar.scan() if self.hw.lidar else None
         if scan is not None and scan.timestamp != getattr(self._last_scan, "timestamp", None):
             self._last_scan = scan
         else:
             scan = None
+
+        # --- localisation (only against a loaded map, never while mapping)
+        if self.pose_valid and self.localizer.active and not self.mapper.active:
+            self.localizer.update(self.odom.pose.as_tuple(), ranges, scan)
 
         pose = self._pose_if_valid()
         # --- mapping
@@ -207,6 +234,9 @@ class Robot:
             # manual mode: commands come from teleop; the safety watchdog stops
             # the motors if the operator's stream of commands stops
             self.safety.tick()
+        self.missions.step()
+        if self.mode == Mode.MISSION and not self.missions.running:
+            self.mode = Mode.IDLE
 
         if now - self._metrics_t > 2.0:
             self._metrics_t = now
@@ -218,10 +248,56 @@ class Robot:
             self.telemetry_history.append(self.telemetry())
 
     def _pose_if_valid(self) -> Optional[tuple[float, float, float]]:
+        """Pose in the map frame, or None if it cannot be trusted."""
         with self._lock:
             if not self.pose_valid or time.time() - self.pose_time > self.cfg["safety"]["pose_timeout_s"]:
                 return None
-            return self.odom.pose.as_tuple()
+            if not self.localizer.pose_ok():
+                return None
+            return self.localizer.map_pose(self.odom.pose.as_tuple())
+
+    def _on_picked(self, color: str) -> None:
+        pose = self._pose_if_valid()
+        if pose is not None:
+            # the object was ~15 cm in front of the robot when it was lifted
+            x = pose[0] + 0.15 * math.cos(pose[2])
+            y = pose[1] + 0.15 * math.sin(pose[2])
+            self.objects.mark_sorted_near(color, x, y)
+
+    def _check_low_battery(self) -> None:
+        nc = self.cfg["navigation"]
+        if not nc.get("return_home_on_low_battery", False) or self.battery_v is None:
+            return
+        threshold = nc.get("return_voltage", 7.0)
+        if self._returning_low_battery:
+            if self.battery_v > threshold + 0.3:
+                self._returning_low_battery = False
+            return
+        if self.battery_v >= threshold or self.mode not in (Mode.MISSION, Mode.SORTING, Mode.MAPPING,
+                                                            Mode.NAVIGATION):
+            return
+        self._returning_low_battery = True
+        loc = nc.get("return_location", "home")
+        self._event("low_battery_return", "warning",
+                    f"battery {self.battery_v:.2f} V below {threshold} V: stopping task, returning to '{loc}'")
+        self.missions.stop("low battery")
+        if self.sorter.running:
+            # sorter.stop() joins its thread; never block the control loop on it
+            threading.Thread(target=self.sorter.stop, daemon=True).start()
+        if self.mapper.active:
+            self.mapper.stop()
+        self.navigator.cancel("low battery")
+        try:
+            if loc not in self.navigator.named_locations:
+                raise CommandRejected(f"location {loc!r} is not defined")
+            if self.mapper.grid.updates == 0 and self.mapper.loaded_name is None:
+                raise CommandRejected("no map")
+            self.navigator.go_to_named(loc)
+            self.mode = Mode.NAVIGATION
+        except (CommandRejected, KeyError) as exc:
+            self.safety.stop("low-battery")
+            self.mode = Mode.IDLE
+            self._event("low_battery_return_failed", "error", f"cannot return to '{loc}': {exc}")
 
     # --------------------------------------------------------------- commands
     def _require(self, cap: str, what: str) -> None:
@@ -247,6 +323,7 @@ class Robot:
         return self.safety.status.as_dict()
 
     def stop(self) -> None:
+        self.missions.stop("stop requested")
         self.navigator.cancel("stop requested")
         self.sorter.stop()
         self.safety.stop("operator")
@@ -256,6 +333,7 @@ class Robot:
     def emergency_stop(self, reason: str = "operator emergency stop") -> None:
         # motors first, everything else after
         self.safety.emergency_stop(reason)
+        self.missions.stop("emergency stop")
         self.navigator.cancel("emergency stop")
         threading.Thread(target=self.sorter.stop, daemon=True).start()
         self.mode = Mode.IDLE
@@ -284,8 +362,11 @@ class Robot:
         self._require_motion_ok()
         if self.sorter.running:
             raise CommandRejected("sorting is running")
+        if self.missions.running:
+            raise CommandRejected("a mission is running; stop it first")
         if self._pose_if_valid() is None:
-            raise CommandRejected("no valid pose estimate")
+            raise CommandRejected("no valid pose estimate" + (" (localisation lost: set the initial pose)"
+                                                             if not self.localizer.pose_ok() else ""))
         if self.mapper.grid.updates == 0 and self.mapper.loaded_name is None and not self.mapper.active:
             raise CommandRejected("no map: start mapping or load a saved map first")
 
@@ -306,6 +387,9 @@ class Robot:
             raise CommandRejected("mapping unavailable: wheel encoders required for pose estimation")
         if self.sorter.running:
             raise CommandRejected("sorting is running")
+        if self.missions.running:
+            raise CommandRejected("a mission is running")
+        self.localizer.deactivate()
         self.mapper.start(reset=reset)
         self.mode = Mode.MAPPING
         if self.mapper.experimental:
@@ -324,16 +408,45 @@ class Robot:
         self.mode = Mode.IDLE
 
     def reset_pose(self, x: float = 0.0, y: float = 0.0, theta: float = 0.0) -> None:
+        """Tell the robot where it is in the map frame (initial pose)."""
         if self.navigator.active:
             raise CommandRejected("cannot reset pose while navigating")
         with self._lock:
-            self.odom.reset(x, y, theta)
+            self.localizer.set_initial_pose((x, y, theta), self.odom.pose.as_tuple())
+
+    def global_localization(self) -> None:
+        if self.navigator.active:
+            raise CommandRejected("stop navigation first")
+        try:
+            self.localizer.global_localization()
+        except RuntimeError as exc:
+            raise CommandRejected(str(exc)) from exc
+
+    def load_map(self, name: str) -> None:
+        if self.navigator.active or self.mapper.active:
+            raise CommandRejected("stop mapping/navigation before loading a map")
+        self.mapper.load(name)
+        current = self._pose_if_valid() or self.localizer.map_pose(self.odom.pose.as_tuple())
+        self.localizer.set_map(self.mapper.grid, name, current)
+
+    # missions
+    def start_mission(self, name: str) -> None:
+        if name not in self.mission_library:
+            raise KeyError(f"unknown mission {name!r}")
+        self._prepare_navigation()
+        self.missions.start(self.mission_library[name])
+        self.mode = Mode.MISSION
+
+    def stop_mission(self) -> None:
+        self.missions.stop("stopped by operator")
+        self.safety.stop("mission")
+        self.mode = Mode.IDLE
 
     # sorting
     def start_sorting(self) -> None:
         self._require("sorting", "sorting")
         self._require_motion_ok()
-        if self.navigator.active:
+        if self.navigator.active or self.missions.running:
             raise CommandRejected("navigation is running")
         if not self.vision.running:
             self.vision.start()
@@ -348,10 +461,16 @@ class Robot:
     # ------------------------------------------------------------------ state
     def pose(self) -> dict:
         with self._lock:
-            p = self.odom.pose
-            return {"x": round(p.x, 4), "y": round(p.y, 4), "theta": round(p.theta, 4),
-                    "valid": self._pose_if_valid() is not None, "source": "wheel_odometry+imu"
-                    if self.hw.imu else "wheel_odometry", "timestamp": self.pose_time}
+            x, y, th = self.localizer.map_pose(self.odom.pose.as_tuple())
+            if self.localizer.active:
+                source = "mcl+ekf" if not self.localizer.experimental else "mcl+ekf (experimental)"
+                std_xy, std_th = self.localizer.std_xy, self.localizer.std_th
+            else:
+                source = "ekf (encoders+gyro)" if self.hw.imu else "ekf (encoders)"
+                std_xy, std_th = self.odom.pose_std()
+            return {"x": round(x, 4), "y": round(y, 4), "theta": round(th, 4),
+                    "valid": self._pose_if_valid() is not None, "source": source,
+                    "std_xy": round(std_xy, 4), "std_theta": round(std_th, 4), "timestamp": self.pose_time}
 
     def telemetry(self) -> dict:
         imu = self.imu_reading
@@ -398,6 +517,9 @@ class Robot:
             "mapping": self.mapper.status(),
             "vision": self.vision.status(),
             "sorting": self.sorter.status(),
+            "localization": self.localizer.status(),
+            "mission": self.missions.status(),
+            "objects_mapped": len(self.objects.list()),
             "capabilities": self.caps,
         }
 
