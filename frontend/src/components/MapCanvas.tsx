@@ -19,6 +19,7 @@ interface Props {
   objects?: MappedObject[];
   groundTruth?: { x: number; y: number; theta: number } | null;
   circles?: Circle[];
+  localPath?: [number, number][];
   onPick?: (x: number, y: number) => void;
   height?: number;
 }
@@ -27,7 +28,7 @@ const COLORS = { unknown: [38, 46, 58], free: [222, 228, 236], occ: [12, 14, 18]
 
 /** Renders the occupancy grid with robot, trajectory, path and goal. Click to pick a goal. */
 export default function MapCanvas({ map, pose, path = [], goal, obstacles = [], particles = [], objects = [],
-                                    groundTruth, circles = [], onPick, height = 480 }: Props) {
+                                    groundTruth, circles = [], localPath = [], onPick, height = 480 }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
   const gridImg = useRef<ImageData | null>(null);
 
@@ -125,6 +126,18 @@ export default function MapCanvas({ map, pose, path = [], goal, obstacles = [], 
       ctx.stroke();
       ctx.setLineDash([]);
     }
+    // local planner (DWA) trajectory
+    if (localPath.length > 1) {
+      ctx.strokeStyle = "#22c55e";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      localPath.forEach(([x, y], i) => {
+        const [px, py] = toPx(x, y);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      });
+      ctx.stroke();
+    }
     // particle cloud (localisation hypotheses)
     ctx.strokeStyle = "rgba(167,139,250,0.55)";
     ctx.lineWidth = 1;
@@ -207,7 +220,7 @@ export default function MapCanvas({ map, pose, path = [], goal, obstacles = [], 
       ctx.lineTo(px + Math.cos(pose.theta) * r * 1.8, py - Math.sin(pose.theta) * r * 1.8);
       ctx.stroke();
     }
-  }, [map, pose, path, goal, obstacles, particles, objects, groundTruth, circles, height]);
+  }, [map, pose, path, goal, obstacles, particles, objects, groundTruth, circles, localPath, height]);
 
   const click = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!onPick || !map) return;

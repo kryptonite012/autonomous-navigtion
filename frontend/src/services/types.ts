@@ -58,6 +58,8 @@ export interface NavStatus {
   recoveries: number;
   exploring: boolean;
   planner: string;
+  controller?: string;
+  local_trajectory?: [number, number][];
   named_locations: Record<string, number[]>;
 }
 
@@ -76,6 +78,7 @@ export interface MappingStatus {
   loaded_map: string | null;
   trajectory_points: number;
   source: string | null;
+  scan_matching?: { matches: number; accepted: number; last_score: number | null; last_shift_m: number | null; last_ms: number } | null;
 }
 
 export interface MapSnapshot {
@@ -183,6 +186,7 @@ export interface Detection {
   bearing_rad: number | null;
   solidity: number;
   circularity: number;
+  shape?: string;
 }
 
 export interface VisionStatus {
@@ -238,6 +242,7 @@ export interface RobotState {
   localization: LocalizationStatus;
   mission: MissionStatus;
   objects_mapped: number;
+  recording?: RecordingStatus;
   capabilities: Record<string, boolean>;
   ground_truth?: { x: number; y: number; theta: number } | null;
 }
@@ -247,4 +252,23 @@ export interface RobotEvent {
   severity: Severity;
   description: string;
   timestamp: number;
+}
+
+export interface RecordingStatus {
+  active: boolean;
+  name: string | null;
+  records: number;
+  scans: number;
+  duration_s: number | null;
+  max_seconds: number;
+}
+
+export interface ScheduleDef {
+  name: string;
+  mission: string;
+  time: string;
+  days: string[];
+  enabled: boolean;
+  last_run: string | null;
+  last_result: string | null;
 }

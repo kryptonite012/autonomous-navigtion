@@ -1,4 +1,5 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { useApiAction } from "../hooks/useApiAction";
 import { useRobot } from "../hooks/useRobot";
@@ -76,12 +77,20 @@ export default function Layout() {
   const { user, logout } = useAuth();
   const { connected, state, telemetry, latencyMs } = useRobot();
   const s = state?.safety;
+  const [menuOpen, setMenuOpen] = useState(false);
+  const location = useLocation();
+  useEffect(() => setMenuOpen(false), [location.pathname]);
   return (
     <div className="flex h-full">
-      <aside className="w-56 shrink-0 border-r border-ink-700 bg-ink-900 flex flex-col">
-        <div className="px-5 py-4 border-b border-ink-700">
-          <div className="text-lg font-bold tracking-widest text-accent">NEXUS</div>
-          <div className="text-[11px] text-slate-500">Autonomous Robot Control</div>
+      {menuOpen && <div className="fixed inset-0 z-30 bg-black/60 lg:hidden" onClick={() => setMenuOpen(false)} />}
+      <aside className={`fixed inset-y-0 left-0 z-40 w-56 shrink-0 border-r border-ink-700 bg-ink-900 flex flex-col
+                         transition-transform lg:static lg:translate-x-0 ${menuOpen ? "translate-x-0" : "-translate-x-full"}`}>
+        <div className="px-5 py-4 border-b border-ink-700 flex items-center justify-between">
+          <div>
+            <div className="text-lg font-bold tracking-widest text-accent">NEXUS</div>
+            <div className="text-[11px] text-slate-500">Autonomous Robot Control</div>
+          </div>
+          <button className="lg:hidden text-slate-400 text-xl" onClick={() => setMenuOpen(false)} aria-label="close menu">×</button>
         </div>
         <nav className="flex-1 overflow-y-auto py-2">
           {NAV.filter(([to]) => to !== "/simulation" || state?.simulated).map(([to, label]) => (
@@ -105,27 +114,29 @@ export default function Layout() {
         </div>
       </aside>
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-14 shrink-0 border-b border-ink-700 bg-ink-900/80 flex items-center gap-4 px-6">
+        <header className="min-h-14 shrink-0 border-b border-ink-700 bg-ink-900/80 flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2 sm:px-6">
+          <button className="lg:hidden btn-ghost px-2" onClick={() => setMenuOpen(true)} aria-label="open menu">☰</button>
           <div className="flex items-center gap-2 text-sm">
             <Dot tone={connected ? "ok" : "bad"} pulse={!connected} />
-            {connected ? "Connected" : "Disconnected"}
+            <span className="hidden sm:inline">{connected ? "Connected" : "Disconnected"}</span>
           </div>
           {state && (
             <>
-              <Pill tone={state.simulated ? "info" : "ok"}>{state.simulated ? "SIMULATION" : "HARDWARE"}</Pill>
-              <Pill tone="muted">mode: {state.mode}</Pill>
+              <Pill tone={state.simulated ? "info" : "ok"}>{state.simulated ? "SIM" : "HW"}<span className="hidden md:inline">{state.simulated ? "ULATION" : "ARDWARE"}</span></Pill>
+              <span className="hidden sm:inline-flex"><Pill tone="muted">mode: {state.mode}</Pill></span>
               {s && !s.motion_allowed && <Pill tone="bad">MOTION DISABLED</Pill>}
               {s && s.zone !== "clear" && <Pill tone={s.zone === "stop" ? "bad" : "warn"}>obstacle {s.zone}</Pill>}
+              {state.recording?.active && <Pill tone="bad">● REC</Pill>}
             </>
           )}
           <div className="ml-auto flex items-center gap-4 text-xs text-slate-400 font-mono">
             {telemetry?.battery_percent != null && <span>BAT {telemetry.battery_percent}%</span>}
-            {latencyMs != null && <span title="age of the last telemetry message">lag {fmt(latencyMs, 0)} ms</span>}
+            {latencyMs != null && <span className="hidden md:inline" title="age of the last telemetry message">lag {fmt(latencyMs, 0)} ms</span>}
             <EstopButton />
           </div>
         </header>
         <Alerts />
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-6">
           <Outlet />
         </main>
       </div>

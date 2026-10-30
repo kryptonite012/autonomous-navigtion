@@ -30,6 +30,7 @@ export default function LiveMap({ onPick, height = 480, goal, layers = {}, circl
       objects={layers.objects !== false ? data?.objects ?? [] : []}
       groundTruth={layers.groundTruth ? data?.ground_truth ?? null : null}
       circles={circles}
+      localPath={nav?.local_trajectory ?? []}
       onPick={onPick}
       height={height}
     />

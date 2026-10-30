@@ -7,7 +7,7 @@ export function Card({ title, actions, children, className = "" }: {
   className?: string;
 }) {
   return (
-    <section className={`card p-4 ${className}`}>
+    <section className={`card p-3 sm:p-4 overflow-x-auto ${className}`}>
       {(title || actions) && (
         <header className="flex items-center justify-between mb-3 gap-2">
           {title && <h2 className="card-title">{title}</h2>}
