@@ -34,6 +34,17 @@ Host: x86-64 Linux VM · Python 3.13 · OpenCV 5.0
 | *(v1.1)* Global localisation from a random kidnap (search + 2 rad spin) | 5/5 within 20 cm, median 3.3 cm | — |
 | *(v1.1)* Particle filter update (400 particles, 36 beams) | 0.99 ms median | — |
 | *(v1.1)* Simulated sorting with object map, 3 min | 5/5 objects in correct bin, all bin-sensor verified | ✅ simulation |
+| *(v1.2)* MCL tracking error after the map bias fix | median 1.9 cm (was 4.3 cm) | — |
+| *(v1.2)* Global localisation after the map bias fix | 5/5 within 20 cm, median 0.9 cm (was 3.3 cm) | — |
+| *(v1.2)* Colour accuracy, neutral light (WB off / gray-world / reference) | 98.4 / 91.1 / 98.4 % | gray-world hurts on tinted scenes |
+| *(v1.2)* Colour accuracy, warm cast | 80.0 / 88.0 / 96.9 % | ✅ with reference WB |
+| *(v1.2)* Colour accuracy, cool cast | 62.9 / 90.9 / 98.4 % | ✅ with reference WB |
+| *(v1.2)* Colour accuracy, green cast | 64.7 / 90.7 / 98.4 % | ✅ with reference WB |
+| *(v1.2)* LiDAR mapping, 4.5 m route, 5 % odometry error: final pose error | 63.0 cm odometry → 0.3 cm scan matching | — |
+| *(v1.2)* Map wall precision | 31 % → 100 % | — |
+| *(v1.2)* Scan match time | 15 ms offline benchmark, 6 ms in the live loop (no overruns at 20 Hz) | — |
+| *(v1.2)* Unmapped box / crossing obstacle, DWA vs pure pursuit | both reached, 0 collisions (see navigation.md) | ✅ simulation |
+| *(v1.2)* Colour detection with shape classification | 78–92 FPS (11–13 ms/frame) | — |
 | Control loop | 20 Hz configured | ✅ |
 
 Before the contrast check was added, the same accuracy set produced 102

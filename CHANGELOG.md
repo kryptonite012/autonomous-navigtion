@@ -5,7 +5,7 @@
 ### Mapping and localisation
 - **LiDAR scan-to-map matching while mapping** (correlative coarse + fine
   search). Simulated final pose error drops from 31–63 cm to under 2 cm, and
-  map wall precision rises from 20–31 % to 83–100 %. About 6 ms per match.
+  map wall precision rises from 20–31 % to 83–100 %. 6–15 ms per match on the dev VM.
 - **Fixed a half-cell (2.5 cm) shift in every map**, caused by ray hits on
   cell boundaries rounding differently in different directions. Hits are
   now pushed a quarter cell past the surface, and distance fields use

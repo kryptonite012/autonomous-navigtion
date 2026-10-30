@@ -115,7 +115,7 @@ In simulation (5 % odometry error):
 | Final pose error, manual mapping drive | 31.5 cm | 0.5–2 cm |
 | Final pose error, 4.5 m offline route (`benchmark.py`) | 63 cm | 0.3 cm |
 | Map wall precision (occupied cells on a true wall) | 20–31 % | 83–100 % |
-| Match time | — | ~6 ms (dev VM) |
+| Match time | — | 6 ms live, 15 ms offline benchmark (dev VM) |
 
 There is no loop closure, so drift can still build up over long loops in
 large spaces; with ROS 2, SLAM Toolbox is the better tool for those.

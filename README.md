@@ -52,7 +52,7 @@ docs/           architecture, hardware, guides, reports
 ```bash
 python3 -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
-python3 -m pytest                                   # 115 passed, 7 hardware tests skipped
+python3 -m pytest                                   # 147 passed, 7 hardware tests skipped
 (cd frontend && npm ci && npm run build)
 python3 -m backend.main
 ```
