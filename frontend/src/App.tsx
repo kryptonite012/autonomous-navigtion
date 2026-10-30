@@ -10,10 +10,12 @@ import Login from "./pages/Login";
 import Logs from "./pages/Logs";
 import Mapping from "./pages/Mapping";
 import Maps from "./pages/Maps";
+import Missions from "./pages/Missions";
 import Navigation from "./pages/Navigation";
 import Overview from "./pages/Overview";
 import Sensors from "./pages/Sensors";
 import Settings from "./pages/Settings";
+import Simulation from "./pages/Simulation";
 import Sorting from "./pages/Sorting";
 import Telemetry from "./pages/Telemetry";
 
@@ -29,6 +31,7 @@ function Gate() {
           <Route path="camera" element={<Camera />} />
           <Route path="mapping" element={<Mapping />} />
           <Route path="navigation" element={<Navigation />} />
+          <Route path="missions" element={<Missions />} />
           <Route path="detection" element={<Detection />} />
           <Route path="sorting" element={<Sorting />} />
           <Route path="telemetry" element={<Telemetry />} />
@@ -37,6 +40,7 @@ function Gate() {
           <Route path="maps" element={<Maps />} />
           <Route path="logs" element={<Logs />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="simulation" element={<Simulation />} />
           <Route path="*" element={<Overview />} />
         </Route>
       </Routes>

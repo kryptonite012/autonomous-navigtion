@@ -10,6 +10,7 @@ const NAV = [
   ["/camera", "Live Camera"],
   ["/mapping", "Mapping"],
   ["/navigation", "Navigation"],
+  ["/missions", "Missions"],
   ["/detection", "Object Detection"],
   ["/sorting", "Color Sorting"],
   ["/telemetry", "Telemetry"],
@@ -18,6 +19,7 @@ const NAV = [
   ["/maps", "Map Management"],
   ["/logs", "Event Logs"],
   ["/settings", "Settings"],
+  ["/simulation", "Simulation"],
 ] as const;
 
 function EstopButton() {
@@ -82,7 +84,7 @@ export default function Layout() {
           <div className="text-[11px] text-slate-500">Autonomous Robot Control</div>
         </div>
         <nav className="flex-1 overflow-y-auto py-2">
-          {NAV.map(([to, label]) => (
+          {NAV.filter(([to]) => to !== "/simulation" || state?.simulated).map(([to, label]) => (
             <NavLink
               key={to}
               to={to}
