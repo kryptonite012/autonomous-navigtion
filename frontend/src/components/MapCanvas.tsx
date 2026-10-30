@@ -1,5 +1,13 @@
 import { useEffect, useRef } from "react";
-import type { MapSnapshot, Pose } from "../services/types";
+import type { MapSnapshot, MappedObject, Pose } from "../services/types";
+import { COLOR_HEX } from "./ui";
+
+export interface Circle {
+  x: number;
+  y: number;
+  r: number;
+  color: string;
+}
 
 interface Props {
   map: MapSnapshot | null;
@@ -7,6 +15,10 @@ interface Props {
   path?: [number, number][];
   goal?: { x: number; y: number } | null;
   obstacles?: [number, number][];
+  particles?: [number, number, number][];
+  objects?: MappedObject[];
+  groundTruth?: { x: number; y: number; theta: number } | null;
+  circles?: Circle[];
   onPick?: (x: number, y: number) => void;
   height?: number;
 }
@@ -14,7 +26,8 @@ interface Props {
 const COLORS = { unknown: [38, 46, 58], free: [222, 228, 236], occ: [12, 14, 18] };
 
 /** Renders the occupancy grid with robot, trajectory, path and goal. Click to pick a goal. */
-export default function MapCanvas({ map, pose, path = [], goal, obstacles = [], onPick, height = 480 }: Props) {
+export default function MapCanvas({ map, pose, path = [], goal, obstacles = [], particles = [], objects = [],
+                                    groundTruth, circles = [], onPick, height = 480 }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
   const gridImg = useRef<ImageData | null>(null);
 
@@ -112,6 +125,34 @@ export default function MapCanvas({ map, pose, path = [], goal, obstacles = [], 
       ctx.stroke();
       ctx.setLineDash([]);
     }
+    // particle cloud (localisation hypotheses)
+    ctx.strokeStyle = "rgba(167,139,250,0.55)";
+    ctx.lineWidth = 1;
+    for (const [x, y, th] of particles) {
+      const [px, py] = toPx(x, y);
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      ctx.lineTo(px + Math.cos(th) * 5, py - Math.sin(th) * 5);
+      ctx.stroke();
+    }
+    for (const c of circles) {
+      const [cx, cy] = toPx(c.x, c.y);
+      ctx.fillStyle = c.color;
+      ctx.beginPath();
+      ctx.arc(cx, cy, Math.max(3, (c.r / map.resolution) * scale), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // objects placed on the map by the camera
+    for (const o of objects) {
+      const [ox, oy] = toPx(o.x, o.y);
+      ctx.fillStyle = o.sorted ? "rgba(100,116,139,0.6)" : COLOR_HEX[o.color] ?? "#fff";
+      ctx.strokeStyle = "#0c1016";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.rect(ox - 4, oy - 4, 8, 8);
+      ctx.fill();
+      ctx.stroke();
+    }
     ctx.fillStyle = "#f97316";
     for (const [x, y] of obstacles) {
       const [px, py] = toPx(x, y);
@@ -129,9 +170,31 @@ export default function MapCanvas({ map, pose, path = [], goal, obstacles = [], 
       ctx.lineTo(gx, gy + 12);
       ctx.stroke();
     }
+    if (groundTruth) {
+      // simulation only: where the robot really is
+      const [gx, gy] = toPx(groundTruth.x, groundTruth.y);
+      const r = Math.max(6, (0.12 / map.resolution) * scale);
+      ctx.strokeStyle = "rgba(34,197,94,0.9)";
+      ctx.setLineDash([3, 3]);
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(gx, gy, r, 0, Math.PI * 2);
+      ctx.moveTo(gx, gy);
+      ctx.lineTo(gx + Math.cos(groundTruth.theta) * r * 1.8, gy - Math.sin(groundTruth.theta) * r * 1.8);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
     if (pose) {
       const [px, py] = toPx(pose.x, pose.y);
       const r = Math.max(6, (0.12 / map.resolution) * scale);
+      if (pose.std_xy && pose.std_xy > 0.02) {
+        // 2-sigma position uncertainty
+        ctx.strokeStyle = "rgba(34,211,238,0.35)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(px, py, Math.min(2000, ((2 * pose.std_xy) / map.resolution) * scale), 0, Math.PI * 2);
+        ctx.stroke();
+      }
       ctx.fillStyle = pose.valid ? "rgba(34,211,238,0.25)" : "rgba(239,68,68,0.3)";
       ctx.strokeStyle = pose.valid ? "#22d3ee" : "#ef4444";
       ctx.lineWidth = 2;
@@ -144,7 +207,7 @@ export default function MapCanvas({ map, pose, path = [], goal, obstacles = [], 
       ctx.lineTo(px + Math.cos(pose.theta) * r * 1.8, py - Math.sin(pose.theta) * r * 1.8);
       ctx.stroke();
     }
-  }, [map, pose, path, goal, obstacles, height]);
+  }, [map, pose, path, goal, obstacles, particles, objects, groundTruth, circles, height]);
 
   const click = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!onPick || !map) return;
