@@ -21,6 +21,7 @@ from robot.mapping.scan_matcher import ScanMatcher
 from robot.mapping.mapper import Mapper
 from robot.motors.kinematics import DiffDriveKinematics
 from robot.navigation.missions import Mission, MissionRunner
+from robot.navigation.scheduler import Scheduler
 from robot.navigation.navigator import NavState, Navigator
 from robot.recorder import Recorder
 from robot.safety.controller import SafetyConfig, SafetyController
@@ -71,6 +72,8 @@ class Robot:
         nc = cfg["navigation"]
         self.missions = MissionRunner(self.navigator, nc.get("home_location", "home"), on_event=self._event)
         self.mission_library: dict[str, Mission] = {}
+        self.scheduler = Scheduler(self.start_mission, on_event=self._event)
+        self._schedule_t = 0.0
         self.vision = VisionPipeline(self.hw.camera, cfg)
         if self.simulated and self.vision.available:
             # the synthetic camera is rendered with exactly these intrinsics
@@ -258,6 +261,9 @@ class Robot:
         if self.mode == Mode.MISSION and not self.missions.running:
             self.mode = Mode.IDLE
 
+        if now - self._schedule_t > 15.0:
+            self._schedule_t = now
+            self.scheduler.check()
         if now - self._metrics_t > 2.0:
             self._metrics_t = now
             self._metrics = system_metrics.snapshot()

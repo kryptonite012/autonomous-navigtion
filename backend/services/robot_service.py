@@ -13,10 +13,11 @@ from sqlalchemy import delete, select
 
 from backend.database.db import Database
 from backend.database.models import (MapRecord, MissionRecord, ObjectDetection, RobotSession,
-                                     SortingRecord, SystemEvent, Telemetry)
+                                     ScheduleRecord, SortingRecord, SystemEvent, Telemetry)
 from backend.websocket.hub import Hub
 from robot.events import Event
 from robot.navigation.missions import Mission
+from robot.navigation.scheduler import Schedule
 from robot.runtime import Robot
 from robot.sorting.sorter import SortRecord
 from robot.vision.detector import Detection
@@ -43,6 +44,8 @@ class RobotService:
         robot.vision.add_listener(self._on_detections)
         robot.sorter.on_record = self._on_sort_record
         self._load_missions()
+        self._load_schedules()
+        robot.scheduler.on_change = self._store_schedule
 
     # ------------------------------------------------------------- lifecycle
     def start(self) -> None:
@@ -201,6 +204,35 @@ class RobotService:
         with self.db.session() as s:
             n = s.execute(delete(MissionRecord).where(MissionRecord.name == name)).rowcount
         return self.robot.mission_library.pop(name, None) is not None or n > 0
+
+    # ------------------------------------------------------------- schedules
+    def _load_schedules(self) -> None:
+        with self.db.session() as s:
+            for rec in s.execute(select(ScheduleRecord)).scalars():
+                try:
+                    self.robot.scheduler.schedules[rec.name] = Schedule.from_dict(json.loads(rec.definition))
+                except (ValueError, KeyError, TypeError) as exc:
+                    log.warning("skipping invalid stored schedule %s: %s", rec.name, exc)
+
+    def _store_schedule(self, sched: Schedule) -> None:
+        data = json.dumps(sched.as_dict())
+        with self.db.session() as s:
+            rec = s.execute(select(ScheduleRecord).where(ScheduleRecord.name == sched.name)).scalar_one_or_none()
+            if rec is None:
+                s.add(ScheduleRecord(name=sched.name, definition=data))
+            else:
+                rec.definition = data
+                rec.updated_at = datetime.now(timezone.utc)
+
+    def save_schedule(self, sched: Schedule) -> None:
+        sched.validate(set(self.robot.mission_library))
+        self.robot.scheduler.schedules[sched.name] = sched
+        self._store_schedule(sched)
+
+    def delete_schedule(self, name: str) -> bool:
+        with self.db.session() as s:
+            n = s.execute(delete(ScheduleRecord).where(ScheduleRecord.name == name)).rowcount
+        return self.robot.scheduler.schedules.pop(name, None) is not None or n > 0
 
     # ----------------------------------------------------------------- maps
     def register_map(self, name: str, path: str, resolution: float, experimental: bool) -> None:

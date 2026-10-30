@@ -53,10 +53,16 @@ def _m3_missions(engine: Engine) -> None:
     MissionRecord.__table__.create(engine, checkfirst=True)
 
 
+def _m4_schedules(engine: Engine) -> None:
+    from backend.database.models import ScheduleRecord
+    ScheduleRecord.__table__.create(engine, checkfirst=True)
+
+
 MIGRATIONS: list[tuple[int, str, Callable[[Engine], None]]] = [
     (1, "initial schema", _m1_initial),
     (2, "pose columns on telemetry", _m2_telemetry_pose),
     (3, "missions", _m3_missions),
+    (4, "mission schedules", _m4_schedules),
 ]
 
 
