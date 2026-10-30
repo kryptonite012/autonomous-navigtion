@@ -93,7 +93,53 @@ in 5 of 5 trials within about 2 s of spinning in place. Uniform random
 particles alone sometimes locked onto the wrong place, which is why the
 search is used.
 
-## 3. Modes (`config/nexus.yaml → localization.mode`)
+## 3. Scan matching while mapping (`robot/mapping/scan_matcher.py`)
+
+The particle filter needs a finished map. While a LiDAR robot is still
+building the map, each scan is aligned with the map built so far before it
+is inserted (correlative scan matching):
+
+* a coarse brute-force search over ±12 cm × ±0.12 rad (2 cm / 0.015 rad
+  steps) around the odometry prediction, then a fine pass at ¼ of the
+  steps around the best result;
+* each candidate is scored with the same likelihood field as the particle
+  filter, using bilinear interpolation;
+* the result is accepted only if the score is ≥ 0.45 and better than the
+  odometry guess. The map ← odom correction is then updated, so the
+  exploration planner and the dashboard use the corrected pose.
+
+In simulation (5 % odometry error):
+
+| | Odometry only | Scan matching |
+|---|---|---|
+| Final pose error, manual mapping drive | 31.5 cm | 0.5–2 cm |
+| Final pose error, 4.5 m offline route (`benchmark.py`) | 63 cm | 0.3 cm |
+| Map wall precision (occupied cells on a true wall) | 20–31 % | 83–100 % |
+| Match time | — | ~6 ms (dev VM) |
+
+There is no loop closure, so drift can still build up over long loops in
+large spaces; with ROS 2, SLAM Toolbox is the better tool for those.
+
+### Map bias fix (v1.2)
+
+Writing the scan matcher exposed a half-cell (2.5 cm) shift in every map.
+A ray ending exactly on a cell boundary was marked in the cell behind the
+wall when travelling in +x/+y, but in front of the wall when travelling in
+−x/−y. Hits are now placed a quarter cell past the surface, and the distance
+field is read with bilinear interpolation. Particle-filter tracking error
+fell from 4.3 cm to 1.9 cm, and global localisation error from 3.3 cm to
+0.8 cm.
+
+### Lost-while-stationary fix (v1.2)
+
+The filter used to update only after the robot moved. A robot that lost
+confidence would then stop, as it must, and never recover. When not
+converged, the filter now also updates every 0.5 s while standing still.
+The "scan match" quality is now weighted by particle weight, and random
+particles are injected *before* weighting, so a deliberately spread initial
+cloud no longer looks like a lost robot.
+
+## 4. Modes (`config/nexus.yaml → localization.mode`)
 
 | Mode | Behaviour |
 |---|---|
@@ -106,7 +152,7 @@ beams carry too little information to localise. The filter can slow drift
 when the starting pose is known, but it also tends to become overconfident.
 Use `on` only to experiment, and keep resetting the pose when it drifts.
 
-## 4. Known limitations
+## 5. Known limitations
 
 * **Wheel slip against furniture**: if the robot pushes against an obstacle
   in a sensor blind spot, the encoders report motion that did not happen.
