@@ -82,7 +82,7 @@ def test_tracking_corrects_odometry_drift(world_and_map):
 
 def test_global_localization_with_lidar(world_and_map):
     w, g = world_and_map
-    pf = ParticleFilter(n=3000, seed=5)
+    pf = ParticleFilter(n=300, seed=5)
     pf.set_map(g)
     pf.init_global()
     truth = path()
