@@ -89,6 +89,8 @@ class Sorter:
         self._lost_frames = 0
         self.max_search_cycles = 6
         self.loop_hz = 10.0
+        self.pick_confirm_s = 1.0      # how long the object must stay gone after lifting
+        self.retry_settle_s = 0.5
         if arm is not None:
             arm.abort = lambda: self._stop.is_set()
 
@@ -348,7 +350,7 @@ class Sorter:
                 self._reset_search()
                 return
             # re-acquire before retrying
-            time.sleep(0.5)
+            time.sleep(self.retry_settle_s)
             dets, _ = self.detections()
             same = [d for d in dets if d.color == color and self._in_pickup_zone(d)]
             if not same:
@@ -381,7 +383,7 @@ class Sorter:
 
     def _pick_confirmed(self, tgt: Detection) -> bool:
         """After lifting, the object must have left the pickup zone in the image."""
-        deadline = time.time() + 1.0
+        deadline = time.time() + self.pick_confirm_s
         clear_frames = 0
         while time.time() < deadline:
             dets, _ = self.detections()
