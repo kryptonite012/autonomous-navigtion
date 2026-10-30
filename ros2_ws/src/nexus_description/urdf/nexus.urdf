@@ -1,0 +1,80 @@
+<?xml version="1.0"?>
+<!-- NEXUS differential drive robot. Dimensions match config/nexus.yaml (chassis). -->
+<robot name="nexus">
+  <material name="dark"><color rgba="0.15 0.17 0.2 1"/></material>
+  <material name="black"><color rgba="0.05 0.05 0.05 1"/></material>
+  <material name="cyan"><color rgba="0.13 0.83 0.93 1"/></material>
+
+  <link name="base_footprint"/>
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 0.04"/>
+      <geometry><cylinder radius="0.12" length="0.06"/></geometry>
+      <material name="dark"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0.04"/>
+      <geometry><cylinder radius="0.12" length="0.06"/></geometry>
+    </collision>
+    <inertial>
+      <mass value="1.6"/>
+      <inertia ixx="0.006" ixy="0" ixz="0" iyy="0.006" iyz="0" izz="0.011"/>
+    </inertial>
+  </link>
+  <joint name="base_footprint_joint" type="fixed">
+    <parent link="base_footprint"/><child link="base_link"/>
+    <origin xyz="0 0 0.033"/>
+  </joint>
+
+  <!-- wheels: radius 0.033, separation 0.16 -->
+  <link name="left_wheel">
+    <visual><origin rpy="1.5708 0 0"/><geometry><cylinder radius="0.033" length="0.025"/></geometry><material name="black"/></visual>
+  </link>
+  <joint name="left_wheel_joint" type="continuous">
+    <parent link="base_link"/><child link="left_wheel"/>
+    <origin xyz="0 0.08 0"/><axis xyz="0 1 0"/>
+  </joint>
+  <link name="right_wheel">
+    <visual><origin rpy="1.5708 0 0"/><geometry><cylinder radius="0.033" length="0.025"/></geometry><material name="black"/></visual>
+  </link>
+  <joint name="right_wheel_joint" type="continuous">
+    <parent link="base_link"/><child link="right_wheel"/>
+    <origin xyz="0 -0.08 0"/><axis xyz="0 1 0"/>
+  </joint>
+
+  <link name="imu_link"/>
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link"/><child link="imu_link"/><origin xyz="0 0 0.05"/>
+  </joint>
+
+  <link name="laser">
+    <visual><geometry><cylinder radius="0.035" length="0.04"/></geometry><material name="cyan"/></visual>
+  </link>
+  <joint name="laser_joint" type="fixed">
+    <parent link="base_link"/><child link="laser"/><origin xyz="0 0 0.11"/>
+  </joint>
+
+  <link name="camera_link"/>
+  <joint name="camera_joint" type="fixed">
+    <parent link="base_link"/><child link="camera_link"/>
+    <!-- 11 cm above the floor, pitched 20 deg down -->
+    <origin xyz="0.09 0 0.077" rpy="0 0.349 0"/>
+  </joint>
+
+  <link name="us_front"/>
+  <joint name="us_front_joint" type="fixed">
+    <parent link="base_link"/><child link="us_front"/><origin xyz="0.11 0 0.03"/>
+  </joint>
+  <link name="us_left"/>
+  <joint name="us_left_joint" type="fixed">
+    <parent link="base_link"/><child link="us_left"/><origin xyz="0.055 0.095 0.03" rpy="0 0 1.0472"/>
+  </joint>
+  <link name="us_right"/>
+  <joint name="us_right_joint" type="fixed">
+    <parent link="base_link"/><child link="us_right"/><origin xyz="0.055 -0.095 0.03" rpy="0 0 -1.0472"/>
+  </joint>
+  <link name="tof_front_low"/>
+  <joint name="tof_front_low_joint" type="fixed">
+    <parent link="base_link"/><child link="tof_front_low"/><origin xyz="0.115 0 0.0"/>
+  </joint>
+</robot>

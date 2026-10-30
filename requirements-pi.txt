@@ -1,0 +1,11 @@
+# Extra packages for running on a Raspberry Pi with real hardware.
+# picamera2 is installed via apt (python3-picamera2) and should be visible
+# to the venv (create it with --system-site-packages).
+-r requirements.txt
+gpiozero>=2.0
+lgpio>=0.2
+smbus2>=0.4
+adafruit-circuitpython-vl53l0x>=3.6
+adafruit-circuitpython-ads1x15>=2.2
+adafruit-circuitpython-pca9685>=3.4
+adafruit-circuitpython-servokit>=1.3

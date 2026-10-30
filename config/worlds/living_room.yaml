@@ -1,0 +1,21 @@
+# Simulated 5 m x 4 m room used for development and tests.
+# Coordinates in metres, origin at the room centre.
+name: living_room
+bounds: [-2.5, -2.0, 2.5, 2.0]
+start_pose: [0.0, 0.0, 0.0]
+# Axis aligned rectangles: [x_min, y_min, x_max, y_max]
+obstacles:
+  - {name: sofa, rect: [-2.4, 1.2, -0.6, 1.9]}
+  - {name: table, rect: [0.6, 0.4, 1.4, 1.0]}
+  - {name: shelf, rect: [1.9, -1.9, 2.4, -0.6]}
+  - {name: box, rect: [-1.4, -1.2, -1.0, -0.8]}
+# Circles: [x, y, radius]
+pillars:
+  - {name: plant, circle: [-0.2, -1.4, 0.15]}
+objects:
+  - {color: red, position: [0.6, -0.3]}
+  - {color: green, position: [-0.8, 0.4]}
+  - {color: blue, position: [1.2, -1.1]}
+  - {color: yellow, position: [-1.8, -0.2]}
+  - {color: orange, position: [0.2, 1.4]}
+bins_position: [-2.2, -1.7]

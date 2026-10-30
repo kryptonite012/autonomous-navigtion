@@ -1,0 +1,8 @@
+[Unit]
+Description=PROJECT NEXUS database backup
+
+[Service]
+Type=oneshot
+User=nexus
+WorkingDirectory=/opt/nexus
+ExecStart=/opt/nexus/scripts/backup_db.sh

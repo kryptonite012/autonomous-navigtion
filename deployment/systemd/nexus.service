@@ -1,0 +1,28 @@
+[Unit]
+Description=PROJECT NEXUS robot runtime and dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=nexus
+Group=nexus
+# gpio, i2c, video and dialout give access to GPIO, sensors, camera and LiDAR
+SupplementaryGroups=gpio i2c video dialout
+WorkingDirectory=/opt/nexus
+EnvironmentFile=/opt/nexus/.env
+ExecStart=/opt/nexus/.venv/bin/python -m backend.main
+Restart=on-failure
+RestartSec=3
+# give the runtime time to stop the motors and release GPIO
+TimeoutStopSec=10
+KillSignal=SIGINT
+
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/nexus/data /opt/nexus/backups /opt/nexus/config
+
+[Install]
+WantedBy=multi-user.target

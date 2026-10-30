@@ -1,0 +1,230 @@
+# PROJECT NEXUS main configuration
+# Values here can be overridden with environment variables (see .env.example).
+
+robot:
+  name: nexus-01
+  # simulation | hardware
+  mode: simulation
+  control_rate_hz: 20
+  telemetry_rate_hz: 10
+
+chassis:
+  wheel_radius_m: 0.033
+  wheel_base_m: 0.160
+  encoder_ticks_per_rev: 1440      # 12 CPR magnetic encoder x 30:1 gearbox x 4 (quadrature)
+  max_linear_mps: 0.30
+  max_angular_rps: 2.0
+  max_linear_accel_mps2: 0.6
+  robot_radius_m: 0.12
+
+safety:
+  emergency_stop_distance_m: 0.15
+  slow_down_distance_m: 0.35
+  slow_down_factor: 0.4
+  side_clearance_m: 0.10
+  sensor_timeout_s: 0.5
+  command_timeout_s: 0.6
+  pose_timeout_s: 1.0
+  battery_min_voltage: 6.6         # 2S Li-ion: 3.3 V/cell
+  battery_warn_voltage: 7.0
+  resume_clear_time_s: 1.0
+
+hardware:
+  # Each device can be disabled. Missing devices are detected at startup and
+  # features that depend on them are disabled automatically.
+  motor_driver:
+    type: tb6612
+    enabled: true
+    pins: {pwma: 12, ain1: 5, ain2: 6, pwmb: 13, bin1: 20, bin2: 21, stby: 16}
+    pwm_frequency_hz: 1000
+    invert_left: false
+    invert_right: true
+  encoders:
+    enabled: true
+    left: {a: 17, b: 27}
+    right: {a: 22, b: 23}
+  ultrasonic:
+    enabled: true
+    # echo pins go through a 5V->3.3V divider (see docs/hardware/wiring.md)
+    sensors:
+      - {name: front, trigger: 24, echo: 25, angle_deg: 0}
+      - {name: left, trigger: 7, echo: 8, angle_deg: 60}
+      - {name: right, trigger: 9, echo: 11, angle_deg: -60}
+  tof:
+    enabled: true
+    bus: 1
+    # VL53L0X sensors share address 0x29; XSHUT pins re-address them at boot
+    sensors:
+      - {name: front_low, xshut: 26, address: 0x30, angle_deg: 0}
+  imu:
+    enabled: true
+    type: mpu6050
+    bus: 1
+    address: 0x68
+  battery:
+    enabled: true
+    type: ads1115
+    bus: 1
+    address: 0x48
+    channel: 0
+    divider_ratio: 3.0             # 20k / 10k divider
+    cells: 2
+  servos:
+    enabled: true
+    type: pca9685
+    bus: 1
+    address: 0x40
+    channels: {base: 0, shoulder: 1, gripper: 2, sorter: 3}
+  emergency_stop:
+    enabled: true
+    # NC mushroom switch to GPIO with pull-up; the same switch also breaks the
+    # motor supply through a relay, so it works without software.
+    pin: 4
+  bin_sensor:
+    enabled: true
+    # IR break-beam across the bin chute, active low
+    pin: 18
+  lidar:
+    enabled: false
+    type: rplidar_a1
+    port: /dev/ttyUSB0
+
+camera:
+  backend: auto          # auto | picamera2 | opencv | simulation
+  device: 0
+  width: 640
+  height: 480
+  fps: 15
+  # Pinhole intrinsics, only valid after running scripts/calibrate_camera.py
+  calibrated: false
+  focal_length_px: 520.0
+  mount_height_m: 0.11
+  mount_pitch_deg: -20.0
+  mount_forward_m: 0.0       # camera ahead of the wheel axis (object map projection)
+
+vision:
+  blur_kernel: 5
+  morph_kernel: 5
+  min_area_px: 150
+  max_area_ratio: 0.6
+  min_solidity: 0.6
+  min_confidence: 0.45
+  min_contrast: 20.0
+  # off | gray_world | reference. "reference" uses wb_gains measured from a
+  # white sheet (dashboard: Object Detection -> White balance). gray_world
+  # needs no calibration but shifts colours on tinted floors.
+  white_balance: "off"
+  wb_gains: [1.0, 1.0, 1.0]
+  track_max_distance_px: 60
+  track_max_missed: 8
+  colors:
+    red:    [{lower: [0, 120, 70],   upper: [8, 255, 255]}, {lower: [170, 120, 70], upper: [179, 255, 255]}]
+    orange: [{lower: [9, 140, 100],  upper: [20, 255, 255]}]
+    yellow: [{lower: [21, 100, 100], upper: [34, 255, 255]}]
+    green:  [{lower: [35, 80, 50],   upper: [85, 255, 255]}]
+    blue:   [{lower: [90, 100, 50],  upper: [130, 255, 255]}]
+    white:  [{lower: [0, 0, 200],    upper: [179, 40, 255]}]
+    black:  [{lower: [0, 0, 0],      upper: [179, 255, 45]}]
+  # white/black are easily confused with walls and shadows, they are detected
+  # but only reported when enabled here
+  enabled_colors: [red, orange, yellow, green, blue]
+
+mapping:
+  resolution_m: 0.05
+  width_m: 8.0
+  height_m: 8.0
+  origin: [-4.0, -4.0]
+  log_odds_hit: 0.85
+  log_odds_miss: -0.4
+  log_odds_min: -4.0
+  log_odds_max: 4.0
+  occupied_threshold: 0.65
+  free_threshold: 0.25
+  max_range_m: 2.0
+  maps_dir: data/maps
+  # with a LiDAR, align every scan with the map before inserting it
+  scan_matching: true
+
+navigation:
+  goal_tolerance_m: 0.08
+  heading_tolerance_rad: 0.2
+  lookahead_m: 0.25
+  inflation_radius_m: 0.18
+  replan_interval_s: 1.0
+  planner: astar           # astar | dijkstra
+  controller: dwa          # dwa | pure_pursuit
+  dwa_lookahead_m: 0.5
+  dwa:
+    horizon_s: 1.6
+    v_samples: 7
+    w_samples: 17
+    safety_margin: 0.03
+    w_goal: 1.0
+    w_clear: 0.5
+    w_speed: 0.25
+  allow_unknown: false
+  stuck_timeout_s: 6.0
+  max_recoveries: 3
+  named_locations:
+    home: [0.0, 0.0, 0.0]
+    dock: [-0.5, 0.0, 3.1416]
+  home_location: home
+  # abort the current task and drive to return_location when the battery
+  # drops below return_voltage (the hard cut-off is safety.battery_min_voltage)
+  return_home_on_low_battery: true
+  return_voltage: 7.0
+  return_location: dock
+
+localization:
+  # auto: particle filter only when a LiDAR is present (3-4 sparse range
+  # beams cannot localise reliably); on: always (experimental without LiDAR)
+  mode: auto
+  particles: 400
+  max_beams: 36
+  sigma_hit_m: 0.08
+  update_min_distance_m: 0.05
+  update_min_angle_rad: 0.1
+  converged_std_m: 0.15
+  converged_std_rad: 0.25
+  lost_std_m: 0.5
+  range_sensor_offset_m: 0.1
+
+sorting:
+  bins:
+    red: 1
+    green: 2
+    blue: 3
+    yellow: 4
+  unclassified_bin: 5
+  bin_capacity: 10
+  # region of the image (normalised) in which an object can be picked
+  pickup_zone: {x_min: 0.38, x_max: 0.62, y_min: 0.67, y_max: 0.98}
+  min_pickup_area_px: 3500
+  max_retries: 2
+  verify_timeout_s: 2.0
+  # servo angles in degrees
+  poses:
+    home:     {base: 90, shoulder: 150, gripper: 30}
+    pre_grip: {base: 90, shoulder: 60,  gripper: 30}
+    grip:     {base: 90, shoulder: 40,  gripper: 30}
+    lift:     {base: 90, shoulder: 140, gripper: 95}
+  gripper_open: 30
+  gripper_closed: 95
+  # sorter carousel angle per bin
+  bin_angles: {1: 10, 2: 50, 3: 90, 4: 130, 5: 170}
+
+simulation:
+  world: config/worlds/living_room.yaml
+  sensor_noise_m: 0.01
+  odom_noise: 0.02
+  pickup_failure_rate: 0.1
+  seed: 7
+
+recording:
+  dir: data/recordings
+  max_minutes: 30            # a recording stops by itself after this
+
+server:
+  cors_origins: ["http://localhost:5173"]
+  rate_limit_per_minute: 240
+  motion_rate_limit_per_second: 20
