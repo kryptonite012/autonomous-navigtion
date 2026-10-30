@@ -38,7 +38,7 @@ class RobotService:
         self._last_mode = None
         self._logged_ids: set[int] = set()
         robot.subscribe(self._on_event)
-        robot.vision.on_detections = self._on_detections
+        robot.vision.add_listener(self._on_detections)
         robot.sorter.on_record = self._on_sort_record
 
     # ------------------------------------------------------------- lifecycle

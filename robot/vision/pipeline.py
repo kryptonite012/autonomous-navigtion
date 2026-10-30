@@ -29,7 +29,9 @@ class VisionPipeline:
                                       cc["mount_pitch_deg"], cc.get("calibrated", False))
         self.tracker = CentroidTracker(vc["track_max_distance_px"], vc["track_max_missed"])
         self.target_fps = cc.get("fps", 15)
-        self.on_detections = on_detections
+        self._listeners: list[Callable[[list[Detection]], None]] = []
+        if on_detections:
+            self._listeners.append(on_detections)
         self._lock = threading.Lock()
         self._running = False
         self._thread: Optional[threading.Thread] = None
@@ -121,9 +123,16 @@ class VisionPipeline:
             self.annotated_jpeg = cv2.imencode(".jpg", annotate(frame, dets, self.fps), enc)[1].tobytes()
             if combined is not None:
                 self.mask_jpeg = cv2.imencode(".jpg", cv2.bitwise_and(frame, frame, mask=combined), enc)[1].tobytes()
-        if self.on_detections and dets:
-            self.on_detections(dets)
+        if dets:
+            for fn in list(self._listeners):
+                try:
+                    fn(dets)
+                except Exception:
+                    log.exception("detection listener failed")
         return dets
+
+    def add_listener(self, fn: Callable[[list[Detection]], None]) -> None:
+        self._listeners.append(fn)
 
     def latest(self) -> tuple[list[Detection], float]:
         with self._lock:
