@@ -200,3 +200,19 @@ class WhiteBalanceRequest(BaseModel):
 
 class RecordingName(BaseModel):
     name: str = Field(min_length=1, max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9_\-]*$")
+
+
+class ScheduleIn(BaseModel):
+    mission: str = Field(min_length=1, max_length=64)
+    time: str = Field(pattern=r"^([01]\d|2[0-3]):([0-5]\d)$")
+    days: list[str] = Field(default_factory=lambda: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+                            min_length=1, max_length=7)
+    enabled: bool = True
+
+
+class CoverageRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=64)
+    spacing: float = Field(default=0.5, ge=0.1, le=3.0)
+    loop: bool = False
+    return_home: bool = True
+    dwell_s: float = Field(default=0.0, ge=0, le=60)

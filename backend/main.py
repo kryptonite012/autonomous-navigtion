@@ -149,7 +149,8 @@ def create_app(cfg: Optional[dict] = None, db_url: Optional[str] = None, secret:
     for r in (auth_routes.router, auth_routes.users_router, robot_routes.system, robot_routes.robot_r,
               robot_routes.nav, robot_routes.mapping, robot_routes.sensors, robot_routes.logs,
               vision_routes.vision, vision_routes.sorting, autonomy_routes.localization,
-              autonomy_routes.missions, autonomy_routes.objects, sim_routes.router, metrics.router,
+              autonomy_routes.missions, autonomy_routes.objects, autonomy_routes.schedules,
+              sim_routes.router, metrics.router,
               recording_routes.router):
         app.include_router(r)
 

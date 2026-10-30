@@ -126,3 +126,20 @@ def test_white_balance_endpoint(client):
     assert client.post("/api/vision/white-balance", json={"mode": "reference"}).status_code == 422
     assert client.post("/api/vision/white-balance", json={"mode": "off"}).json()["mode"] == "off"
     assert client.get("/api/vision/status").json()["white_balance"]["mode"] == "off"
+
+
+def test_coverage_mission_and_schedules(client):
+    assert client.post("/api/missions/coverage", json={"name": "sweep"}).status_code == 409    # no map yet
+    assert client.post("/api/simulation/reference-map", json={"name": "ref"}).status_code == 200
+    assert client.post("/api/mapping/load", json={"name": "ref"}).status_code == 200
+    r = client.post("/api/missions/coverage", json={"name": "sweep", "spacing": 0.6})
+    assert r.status_code == 200, r.text
+    assert len(r.json()["mission"]["waypoints"]) >= 6
+    assert client.post("/api/missions/coverage", json={"name": "x", "spacing": 0.1}).status_code == 422
+    r = client.put("/api/schedules/nightly", json={"mission": "sweep", "time": "21:00", "days": ["mon", "fri"]})
+    assert r.status_code == 200, r.text
+    assert client.put("/api/schedules/bad", json={"mission": "nope", "time": "21:00"}).status_code == 422
+    assert client.put("/api/schedules/bad", json={"mission": "sweep", "time": "9pm"}).status_code == 422
+    assert [s["name"] for s in client.get("/api/schedules").json()] == ["nightly"]
+    assert client.delete("/api/schedules/nightly").status_code == 200
+    assert client.delete("/api/schedules/nightly").status_code == 404
